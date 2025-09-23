@@ -1,0 +1,11 @@
+[package]
+name = "bx-compiler"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+lalrpop = { version = "0.22.2", default-features = false }
+
+[dependencies]
+logos = "0.15.1"
+lalrpop-util = "0.22.2"
