@@ -9,3 +9,5 @@ lalrpop = { version = "0.22.2", default-features = false }
 [dependencies]
 logos = "0.15.1"
 lalrpop-util = "0.22.2"
+serde = { version = "1.0.227", features = ["derive"] }
+serde_json = "1.0.145"

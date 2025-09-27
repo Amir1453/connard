@@ -15,6 +15,13 @@ extern {
     "VAR" => Token::KeywordVar,
     "INT" => Token::KeywordInt,
     "PRINT" => Token::KeywordPrint,
+    "IF" => Token::KeywordIf,
+    "ELSE" => Token::KeywordElse,
+    "WHILE" => Token::KeywordWhile,
+    "BREAK" => Token::KeywordBreak,
+    "CONTINUE" => Token::KeywordContinue,
+    "TRUE" => Token::KeywordTrue,
+    "FALSE" => Token::KeywordFalse,
     "IDENT" => Token::Identifier(<String>),
     "NUMBER" => Token::Number(<i64>),
     "(" => Token::LParen,
@@ -24,35 +31,80 @@ extern {
     "=" => Token::Assign,
     ";" => Token::Semicolon,
     ":" => Token::Colon,
-    "+" => Token::OperatorAdd,
-    "-" => Token::OperatorSub,
-    "*" => Token::OperatorMul,
-    "/" => Token::OperatorDiv,
-    "%" => Token::OperatorMod,
-    "|" => Token::OperatorOr,
-    "^" => Token::OperatorXor,
-    "&" => Token::OperatorAnd,
-    "~" => Token::OperatorComp,
-    "<<" => Token::OperatorLShift,
-    ">>" => Token::OperatorRShift,
+    "+" => Token::OpPlus,
+    "-" => Token::OpMinus,
+    "*" => Token::OpStar,
+    "/" => Token::OpSlash,
+    "%" => Token::OpMod,
+    "|" => Token::OpPipe,
+    "^" => Token::OpCaret,
+    "&" => Token::OpAmpersand,
+    "~" => Token::OpTilde,
+    "<<" => Token::OpLShift,
+    ">>" => Token::OpRShift,
+    "==" => Token::OpEq,
+    "!=" => Token::OpNEq,
+    "<" => Token::OpL,
+    "<=" => Token::OpLTE,
+    ">" => Token::OpG,
+    ">=" => Token::OpGTE,
+    "&&" => Token::OpLAnd,
+    "||" => Token::OpLOr,
+    "!" => Token::OpLNot,
   }
 }
 
 
-pub BX: Vec<ast::Statement> = {
-  "DEF" "MAIN" "(" ")" "{"  <stmts:Statement*> "}" => stmts
+pub BX: ast::Program = {
+  "DEF" "MAIN" "(" ")" "{"  <stmts:Statement*> "}" => ast::Block(stmts)
 }
+
+IFElse: ast::Statement = {
+  "IF" "(" <condition:Expression> ")" "{" <then_block:Statement*> "}" <ifrest:IFRest> => {
+    ast::Statement::If {
+      condition,
+      then_block: Box::new(ast::Block(then_block)),
+      else_branch: ifrest,
+    }
+  },
+}
+
+IFRest: Option<Box<ast::Statement>> = {
+    "ELSE" "{" <else_stmts:Statement*> "}" => {
+        Some(Box::new(ast::Statement::Block(Box::new(ast::Block(else_stmts)))))
+    },
+
+    "ELSE" <ifelse:IFElse> => {
+        Some(Box::new(ifelse))
+    },
+
+    => None,
+};
 
 Statement: ast::Statement = {
   "VAR" <name:"IDENT"> "=" <value:Expression> ":" "INT" ";" => {
     ast::Statement::Variable { name, value }
   },
+
   <name:"IDENT"> "=" <value:Expression> ";" => {
     ast::Statement::Assignment { name, value }
   },
+
   "PRINT" "(" <value:Expression> ")" ";" => {
     ast::Statement::Print { value }
   },
+
+  "{" <stmts:Statement*> "}" => ast::Statement::Block(Box::new(ast::Block(stmts))),
+
+  <ifelse:IFElse> => ifelse,
+
+  "WHILE" "(" <condition:Expression> ")" "{" <stmts:Statement*> "}" => {
+    ast::Statement::While { condition, block: Box::new(ast::Block(stmts)) }
+  },
+
+  "BREAK" ";"=> ast::Statement::Jump(ast::JumpState::Break),
+
+  "CONTINUE" ";" => ast::Statement::Jump(ast::JumpState::Continue),
 }
 
 Expression: Box<ast::Expression> = {
@@ -62,7 +114,7 @@ Expression: Box<ast::Expression> = {
   #[precedence(level="10")] #[assoc(side="right")]
   "~" <value:Expression> => {
     Box::new(ast::Expression::UnaryOperation {
-      operator: ast::Operator::Comp,
+      operator: ast::Operator::Tilde,
       value
     })
   },
@@ -70,7 +122,14 @@ Expression: Box<ast::Expression> = {
   #[precedence(level="20")] #[assoc(side="right")]
   "-" <value:Expression> => {
     Box::new(ast::Expression::UnaryOperation {
-      operator: ast::Operator::Sub,
+      operator: ast::Operator::Neg,
+      value
+    })
+  },
+
+  "!" <value:Expression> => {
+    Box::new(ast::Expression::UnaryOperation {
+      operator: ast::Operator::LNot,
       value
     })
   },
@@ -79,7 +138,7 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "*" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Mul,
+      operator: ast::Operator::Star,
       rhs
     })
   },
@@ -87,7 +146,7 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "/" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Div,
+      operator: ast::Operator::Slash,
       rhs
     })
   },
@@ -104,7 +163,7 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "+" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Add,
+      operator: ast::Operator::Plus,
       rhs
     })
   },
@@ -112,7 +171,7 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "-" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Sub,
+      operator: ast::Operator::Minus,
       rhs
     })
   },
@@ -134,11 +193,61 @@ Expression: Box<ast::Expression> = {
     })
   },
 
+  #[precedence(level="53")] #[assoc(side="none")]
+  <lhs:Expression> "<" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::L,
+      rhs
+    })
+  },
+
+  <lhs:Expression> "<=" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::LTE,
+      rhs
+    })
+  },
+
+  <lhs:Expression> ">" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::G,
+      rhs
+    })
+  },
+
+  <lhs:Expression> ">=" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::GTE,
+      rhs
+    })
+  },
+
+  #[precedence(level="56")] #[assoc(side="none")]
+  <lhs:Expression> "==" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::Equal,
+      rhs
+    })
+  },
+
+  <lhs:Expression> "!=" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::NEqual,
+      rhs
+    })
+  },
+
   #[precedence(level="60")] #[assoc(side="left")]
   <lhs:Expression> "&" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::And,
+      operator: ast::Operator::Ampersand,
       rhs
     })
   },
@@ -147,7 +256,7 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "^" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Xor,
+      operator: ast::Operator::Caret,
       rhs
     })
   },
@@ -156,7 +265,25 @@ Expression: Box<ast::Expression> = {
   <lhs:Expression> "|" <rhs:Expression> => {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
-      operator: ast::Operator::Or,
+      operator: ast::Operator::Pipe,
+      rhs
+    })
+  },
+
+  #[precedence(level="83")] #[assoc(side="left")]
+  <lhs:Expression> "&&" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::LAnd,
+      rhs
+    })
+  },
+
+  #[precedence(level="86")] #[assoc(side="left")]
+  <lhs:Expression> "||" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::LOr,
       rhs
     })
   },
@@ -166,8 +293,18 @@ Term: Box<ast::Expression> = {
   <val:"NUMBER"> => {
     Box::new(ast::Expression::Number(val))
   },
+
   <name:"IDENT"> => {
     Box::new(ast::Expression::Variable(name))
   },
+
+  "TRUE" => {
+    Box::new(ast::Expression::Bool(true))
+  },
+
+  "FALSE" => {
+    Box::new(ast::Expression::Bool(false))
+  },
+
   "(" <Expression> ")",
 }

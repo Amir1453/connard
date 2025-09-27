@@ -19,8 +19,13 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Spanned<Token, usize, LexicalError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.token_stream
-            .next()
-            .map(|(token, span)| Ok((span.start, token?, span.end)))
+        self.token_stream.next().map(|(token, span)| match token {
+            Ok(token) => Ok((span.start, token, span.end)),
+            Err(_) => Ok((
+                span.start,
+                Token::Error("Shitty Token".to_string()),
+                span.end,
+            )),
+        })
     }
 }

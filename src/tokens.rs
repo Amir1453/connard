@@ -37,6 +37,20 @@ pub enum Token {
     KeywordInt,
     #[token("print")]
     KeywordPrint,
+    #[token("if")]
+    KeywordIf,
+    #[token("else")]
+    KeywordElse,
+    #[token("while")]
+    KeywordWhile,
+    #[token("break")]
+    KeywordBreak,
+    #[token("continue")]
+    KeywordContinue,
+    #[token("true")]
+    KeywordTrue,
+    #[token("false")]
+    KeywordFalse,
 
     #[regex("[_a-zA-Z][_0-9a-zA-Z]*", |lex| lex.slice().to_string())]
     Identifier(String),
@@ -59,28 +73,49 @@ pub enum Token {
     Colon,
 
     #[token("+")]
-    OperatorAdd,
+    OpPlus,
     #[token("-")]
-    OperatorSub,
+    OpMinus,
     #[token("*")]
-    OperatorMul,
+    OpStar,
     #[token("/")]
-    OperatorDiv,
+    OpSlash,
     #[token("%")]
-    OperatorMod,
+    OpMod,
 
     #[token("|")]
-    OperatorOr,
+    OpPipe,
     #[token("^")]
-    OperatorXor,
+    OpCaret,
     #[token("&")]
-    OperatorAnd,
+    OpAmpersand,
     #[token("~")]
-    OperatorComp,
+    OpTilde,
     #[token("<<")]
-    OperatorLShift,
+    OpLShift,
     #[token(">>")]
-    OperatorRShift,
+    OpRShift,
+
+    #[token("==")]
+    OpEq,
+    #[token("!=")]
+    OpNEq,
+    #[token("<")]
+    OpL,
+    #[token("<=")]
+    OpLTE,
+    #[token(">")]
+    OpG,
+    #[token(">=")]
+    OpGTE,
+    #[token("&&")]
+    OpLAnd,
+    #[token("||")]
+    OpLOr,
+    #[token("!")]
+    OpLNot,
+
+    Error(String),
 }
 
 impl fmt::Display for Token {
