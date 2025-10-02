@@ -1,4 +1,5 @@
 use crate::tokens::{Token, LexicalError};
+use crate::types::Type;
 use crate::ast;
 
 grammar;
@@ -14,6 +15,7 @@ extern {
     "MAIN" => Token::KeywordMain,
     "VAR" => Token::KeywordVar,
     "INT" => Token::KeywordInt,
+    "BOOL" => Token::KeywordBool,
     "PRINT" => Token::KeywordPrint,
     "IF" => Token::KeywordIf,
     "ELSE" => Token::KeywordElse,
@@ -83,7 +85,11 @@ IFRest: Option<Box<ast::Statement>> = {
 
 Statement: ast::Statement = {
   "VAR" <name:"IDENT"> "=" <value:Expression> ":" "INT" ";" => {
-    ast::Statement::Variable { name, value }
+    ast::Statement::Variable { name, value, ty: Type::Int }
+  },
+
+  "VAR" <name:"IDENT"> "=" <value:Expression> ":" "BOOL" ";" => {
+    ast::Statement::Variable { name, value, ty: Type::Bool }
   },
 
   <name:"IDENT"> "=" <value:Expression> ";" => {
@@ -115,7 +121,8 @@ Expression: Box<ast::Expression> = {
   "~" <value:Expression> => {
     Box::new(ast::Expression::UnaryOperation {
       operator: ast::Operator::Tilde,
-      value
+      value,
+      ty: None
     })
   },
 
@@ -123,14 +130,16 @@ Expression: Box<ast::Expression> = {
   "-" <value:Expression> => {
     Box::new(ast::Expression::UnaryOperation {
       operator: ast::Operator::Neg,
-      value
+      value,
+      ty: None
     })
   },
 
   "!" <value:Expression> => {
     Box::new(ast::Expression::UnaryOperation {
       operator: ast::Operator::LNot,
-      value
+      value,
+      ty: None
     })
   },
 
@@ -139,7 +148,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Star,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -147,7 +157,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Slash,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -155,7 +166,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Mod,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -164,7 +176,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Plus,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -172,7 +185,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Minus,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -181,7 +195,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::LShift,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -189,7 +204,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::RShift,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -198,7 +214,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::L,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -206,7 +223,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::LTE,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -214,7 +232,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::G,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -222,7 +241,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::GTE,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -231,7 +251,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Equal,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -239,7 +260,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::NEqual,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -248,7 +270,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Ampersand,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -257,7 +280,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Caret,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -266,7 +290,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::Pipe,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -275,7 +300,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::LAnd,
-      rhs
+      rhs,
+      ty: None
     })
   },
 
@@ -284,7 +310,8 @@ Expression: Box<ast::Expression> = {
     Box::new(ast::Expression::BinaryOperation {
       lhs,
       operator: ast::Operator::LOr,
-      rhs
+      rhs,
+      ty: None
     })
   },
 }

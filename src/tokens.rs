@@ -35,6 +35,8 @@ pub enum Token {
     KeywordVar,
     #[token("int")]
     KeywordInt,
+    #[token("bool")]
+    KeywordBool,
     #[token("print")]
     KeywordPrint,
     #[token("if")]

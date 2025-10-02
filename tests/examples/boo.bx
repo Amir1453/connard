@@ -1,0 +1,6 @@
+def main() {
+  var x = 10 : int;
+  var y = 20 : int;
+
+  if (x <= y || y <= x) { print(11); } // true
+}

@@ -1,3 +1,4 @@
+use crate::types::Type;
 use std::fmt::Debug;
 
 pub type Program = Block;
@@ -10,6 +11,7 @@ pub enum Statement {
     Variable {
         name: String,
         value: Box<Expression>,
+        ty: Type,
     },
 
     Block(Box<Block>),
@@ -47,15 +49,17 @@ pub enum Expression {
         lhs: Box<Expression>,
         operator: Operator,
         rhs: Box<Expression>,
+        ty: Option<Type>,
     },
 
     UnaryOperation {
         operator: Operator,
         value: Box<Expression>,
+        ty: Option<Type>,
     },
 }
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Operator {
     Plus,
     Minus,
@@ -80,10 +84,6 @@ pub enum Operator {
     LAnd,
     LOr,
     LNot,
-
-    CP,
-    PRINT,
-    CNST,
 }
 
 #[derive(Clone, Debug, PartialEq)]

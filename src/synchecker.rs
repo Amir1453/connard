@@ -1,30 +1,19 @@
-#![allow(dead_code)]
-
 use crate::ast::*;
-use std::collections::HashSet;
+use crate::types::{Span, SyntaxError, SyntaxErrorType, VarScopes};
 
-type Span = (usize, usize);
-
-pub enum SyntaxErrorType {
-    DuplicateVariable,
-    MissingVariable,
-}
-
-pub struct SyntaxError {
-    pub error_type: SyntaxErrorType,
-    pub span: Option<Span>,
-}
-
+#[derive(Clone, Debug, PartialEq)]
 pub struct SynChecker {
-    vars: HashSet<String>,
+    scopes: VarScopes,
     errors: Vec<SyntaxError>,
+    loop_depth: usize,
 }
 
 impl SynChecker {
     fn new() -> Self {
         Self {
-            vars: HashSet::new(),
+            scopes: VarScopes::new(),
             errors: Vec::new(),
+            loop_depth: 0,
         }
     }
 
@@ -37,24 +26,29 @@ impl SynChecker {
         }
     }
 
-    fn clear(&mut self) {
-        self.vars.clear();
-        self.errors.clear();
+    fn check_program(&mut self, program: &Program) {
+        self.check_block(program);
     }
 
-    fn check_program(&mut self, program: &Program) {
-        for stmt in &program.0 {
+    fn check_block(&mut self, block: &Block) {
+        self.scopes.push_scope();
+        for stmt in &block.0 {
             self.check_statement(stmt);
         }
+        self.scopes.pop_scope()
     }
 
     fn check_statement(&mut self, stmt: &Statement) {
         match stmt {
-            Statement::Variable { name, value } => {
+            Statement::Variable { name, value, .. } => {
                 self.check_expression(value);
                 if self.check_non_declared(name) {
-                    self.vars.insert(name.clone());
+                    self.scopes.current_insert(name.clone());
                 }
+            }
+
+            Statement::Block(block) => {
+                self.check_block(block);
             }
 
             Statement::Assignment { name, value } => {
@@ -66,7 +60,33 @@ impl SynChecker {
                 self.check_expression(value);
             }
 
-            _ => todo!(),
+            Statement::If {
+                condition,
+                then_block,
+                else_branch,
+            } => {
+                self.check_expression(condition);
+
+                self.check_block(then_block);
+
+                if let Some(ebr) = else_branch {
+                    self.check_statement(ebr);
+                }
+            }
+
+            Statement::While { condition, block } => {
+                self.check_expression(condition);
+
+                self.loop_depth += 1;
+                self.check_block(block);
+                self.loop_depth -= 1;
+            }
+
+            Statement::Jump(_) => {
+                if self.loop_depth == 0 {
+                    self.insert_error(SyntaxErrorType::JumpOutsideLoop, None);
+                }
+            }
         }
     }
 
@@ -76,49 +96,38 @@ impl SynChecker {
                 self.check_declared(name);
             }
 
-            Expression::Number(value) => {
-                self.check_valid_integer(value);
-            }
+            Expression::Number(_) => {}
 
-            Expression::BinaryOperation {
-                lhs,
-                operator: _,
-                rhs,
-            } => {
+            Expression::Bool(_) => {}
+
+            Expression::BinaryOperation { lhs, rhs, .. } => {
                 self.check_expression(lhs);
                 self.check_expression(rhs);
             }
 
-            Expression::UnaryOperation { operator: _, value } => {
+            Expression::UnaryOperation { value, .. } => {
                 self.check_expression(value);
             }
-            _ => todo!(),
         }
     }
 
     fn check_non_declared(&mut self, name: &String) -> bool {
-        if self.vars.contains(name) {
-            self.errors.push(SyntaxError {
-                error_type: SyntaxErrorType::DuplicateVariable,
-                span: None,
-            });
+        if self.scopes.current_contains(name) {
+            self.insert_error(SyntaxErrorType::DuplicateVariable, None);
             return false;
         }
         return true;
     }
 
     fn check_declared(&mut self, name: &String) -> bool {
-        if !(self.vars.contains(name)) {
-            self.errors.push(SyntaxError {
-                error_type: SyntaxErrorType::MissingVariable,
-                span: None,
-            });
+        if !(self.scopes.any_contains(name)) {
+            self.insert_error(SyntaxErrorType::MissingVariable, None);
             return false;
         }
         return true;
     }
 
-    fn check_valid_integer(&mut self, _value: &i64) -> bool {
-        return true;
+    fn insert_error(&mut self, error_type: SyntaxErrorType, _span: Option<Span>) {
+        self.errors.push(SyntaxError::new(error_type));
     }
 }
