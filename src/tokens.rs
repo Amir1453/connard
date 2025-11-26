@@ -1,6 +1,9 @@
+use compact_str::ToCompactString;
 use logos::Logos;
 use std::fmt;
 use std::num::ParseIntError;
+
+use crate::types::Name;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexicalError {
@@ -29,16 +32,16 @@ impl fmt::Display for LexicalError {
 pub enum Token {
     #[token("def")]
     KeywordDef,
-    #[token("main")]
-    KeywordMain,
     #[token("var")]
     KeywordVar,
     #[token("int")]
     KeywordInt,
     #[token("bool")]
     KeywordBool,
-    #[token("print")]
-    KeywordPrint,
+    #[token("void")]
+    KeywordVoid,
+    #[token("return")]
+    KeywordReturn,
     #[token("if")]
     KeywordIf,
     #[token("else")]
@@ -54,11 +57,13 @@ pub enum Token {
     #[token("false")]
     KeywordFalse,
 
-    #[regex("[_a-zA-Z][_0-9a-zA-Z]*", |lex| lex.slice().to_string())]
-    Identifier(String),
-    #[regex("[0-9]*", |lex| lex.slice().parse())]
+    #[regex("[_a-zA-Z][_0-9a-zA-Z]*", |lex| lex.slice().to_compact_string())]
+    Identifier(Name),
+    #[regex("-?[0-9]*", |lex| lex.slice().parse())]
     Number(i64),
 
+    #[token(",")]
+    Comma,
     #[token("(")]
     LParen,
     #[token(")")]

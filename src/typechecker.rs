@@ -1,16 +1,21 @@
-use crate::ast::*;
-use crate::types::{Span, Type, TypeError, TypeErrorType, TypeScopes};
+use std::collections::HashMap;
+use std::iter::zip;
 
-#[derive(Clone, Debug, PartialEq)]
+use crate::ast::*;
+use crate::types::{Name, ProcType, Span, Stack, Type};
+
+#[derive(Clone, PartialEq)]
 pub struct TypeChecker {
-    scopes: TypeScopes,
+    scopes: Stack<HashMap<Name, SemanticType>>,
+    current_proc_name: Name,
     errors: Vec<TypeError>,
 }
 
 impl TypeChecker {
     fn new() -> Self {
         Self {
-            scopes: TypeScopes::new(),
+            scopes: Stack::new_with(HashMap::new()),
+            current_proc_name: Name::with_capacity(50),
             errors: Vec::new(),
         }
     }
@@ -25,27 +30,63 @@ impl TypeChecker {
     }
 
     fn check_program(&mut self, program: &mut Program) {
-        self.check_block(program);
+        for decl in &mut program.0 {
+            match decl {
+                Declaration::Proc {
+                    proc_name,
+                    proc_args,
+                    return_type,
+                    ..
+                } => {
+                    self.current_scope_insert_proc(
+                        proc_name.clone(),
+                        proc_args.clone(),
+                        return_type.clone(),
+                    );
+                }
+
+                Declaration::Variable(var) => self.check_global_variable(var),
+            }
+        }
+
+        for decl in &mut program.0 {
+            match decl {
+                Declaration::Proc {
+                    proc_name, block, ..
+                } => {
+                    self.current_proc_name = proc_name.clone();
+                    self.check_block(block);
+                    self.current_proc_name.clear();
+                }
+
+                _ => {}
+            }
+        }
+    }
+
+    fn check_global_variable(&mut self, var: &mut Variable) {
+        let var_type = var.ty;
+        for (name, expr) in zip(&var.names, &mut var.values) {
+            let value_type = expr.get_type();
+            if value_type != var_type {
+                self.insert_error(TypeErrorType::TypeMismatchGlobalDecl, None);
+            }
+
+            self.current_scope_insert_simple(name.clone(), value_type);
+        }
     }
 
     fn check_block(&mut self, block: &mut Block) {
-        self.scopes.push_scope();
+        self.scopes.push(HashMap::new());
         for stmt in &mut block.0 {
             self.check_statement(stmt);
         }
-        self.scopes.pop_scope();
+        self.scopes.pop();
     }
 
     fn check_statement(&mut self, stmt: &mut Statement) {
         match stmt {
-            Statement::Variable { name, value, ty } => {
-                self.check_expression(value);
-                let value_type = self.get_exp_type(value);
-                if value_type != *ty {
-                    self.insert_error(TypeErrorType::TypeMismatchDecl, None);
-                }
-                self.scopes.current_insert(name.clone(), value_type);
-            }
+            Statement::Variable(var) => self.check_variable(var),
 
             Statement::Block(block) => {
                 self.check_block(block);
@@ -53,17 +94,37 @@ impl TypeChecker {
 
             Statement::Assignment { name, value } => {
                 self.check_expression(value);
-                let value_type = self.get_exp_type(value);
-                if self.scopes.find_type(name).unwrap() != value_type {
+                let value_type = value.get_type();
+                if self.find_simple_type(name) != value_type {
                     self.insert_error(TypeErrorType::TypeMismatchAssign, None);
                 }
             }
 
-            Statement::Print { value } => {
-                self.check_expression(value);
-                let value_type = self.get_exp_type(value);
-                if value_type != Type::Int {
-                    self.insert_error(TypeErrorType::TypeMismatchPrint, None);
+            Statement::Eval(expr) => self.check_expression(expr),
+
+            Statement::Return(expr) => {
+                match self.find_proc_type(&self.current_proc_name).return_type {
+                    Some(expected) => {
+                        if let Some(exp) = expr {
+                            self.check_expression(exp);
+                            let ty = exp.get_type();
+                            if ty != expected {
+                                self.insert_error(TypeErrorType::ReturnTypeMismatch, None);
+                            }
+                        } else {
+                            self.insert_error(TypeErrorType::ReturnValueMissing, None);
+                        }
+                    }
+
+                    None => {
+                        if let Some(exp) = expr {
+                            self.check_expression(exp);
+                            let ty = exp.get_type();
+                            if ty != Type::Void {
+                                self.insert_error(TypeErrorType::ReturnTypeMismatchSub, None);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -73,7 +134,7 @@ impl TypeChecker {
                 else_branch,
             } => {
                 self.check_expression(condition);
-                if self.get_exp_type(condition) != Type::Bool {
+                if condition.get_type() != Type::Bool {
                     self.insert_error(TypeErrorType::ConditionNotBool, None);
                 }
 
@@ -86,7 +147,7 @@ impl TypeChecker {
 
             Statement::While { condition, block } => {
                 self.check_expression(condition);
-                if self.get_exp_type(condition) != Type::Bool {
+                if condition.get_type() != Type::Bool {
                     self.insert_error(TypeErrorType::ConditionNotBool, None);
                 }
 
@@ -97,15 +158,32 @@ impl TypeChecker {
         }
     }
 
+    fn check_variable(&mut self, var: &mut Variable) {
+        let var_type = var.ty;
+        for (name, expr) in zip(&var.names, &mut var.values) {
+            self.check_expression(expr);
+            let value_type = expr.get_type();
+            if value_type != var_type {
+                self.insert_error(TypeErrorType::TypeMismatchDecl, None);
+            }
+
+            self.current_scope_insert_simple(name.clone(), value_type);
+        }
+    }
+
     fn check_expression(&mut self, expr: &mut Expression) {
         match expr {
+            Expression::Variable(name, ty) => {
+                *ty = Some(self.find_simple_type(name));
+            }
+
             Expression::UnaryOperation {
                 operator,
                 value,
                 ty,
             } => {
                 self.check_expression(value);
-                let value_type = self.get_exp_type(value);
+                let value_type = value.get_type();
                 match operator {
                     Operator::Neg => {
                         if value_type != Type::Int {
@@ -137,7 +215,6 @@ impl TypeChecker {
                     _ => {}
                 }
             }
-
             Expression::BinaryOperation {
                 lhs,
                 operator,
@@ -146,8 +223,8 @@ impl TypeChecker {
             } => {
                 self.check_expression(lhs);
                 self.check_expression(rhs);
-                let lhs_type = self.get_exp_type(lhs);
-                let rhs_type = self.get_exp_type(rhs);
+                let lhs_type = lhs.get_type();
+                let rhs_type = rhs.get_type();
 
                 use Operator::*;
                 let exp_type = match operator {
@@ -191,25 +268,128 @@ impl TypeChecker {
                 };
                 *ty = exp_type;
             }
+            Expression::ProcCall {
+                proc_name,
+                proc_args,
+                ty,
+            } => {
+                let proc_type = self.find_proc_type(proc_name);
+                *ty = Some(proc_type.return_type.unwrap_or(Type::Void));
+
+                if let (Some(args), Some(arg_supposed_types)) =
+                    (proc_args, proc_type.args_type.as_ref())
+                {
+                    for (arg, (_name, expected_ty)) in
+                        args.iter_mut().zip(arg_supposed_types.iter())
+                    {
+                        self.check_expression(arg);
+                        let arg_type = arg.get_type();
+                        if arg_type != *expected_ty {
+                            self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                        }
+                    }
+                }
+            }
 
             _ => {}
         }
     }
 
-    fn get_exp_type(&self, expr: &Expression) -> Type {
-        match expr {
-            Expression::Variable(name) => match self.scopes.find_type(name) {
-                Some(t) => t,
-                None => Type::Error,
-            },
-            Expression::Number(_) => Type::Int,
-            Expression::Bool(_) => Type::Bool,
-            Expression::UnaryOperation { ty, .. } => ty.unwrap_or(Type::Error),
-            Expression::BinaryOperation { ty, .. } => ty.unwrap_or(Type::Error),
+    // Stack helpers
+
+    pub fn current_scope_insert_simple(&mut self, name: Name, ty: Type) {
+        if let Some(current) = self.scopes.top_mut() {
+            current.insert(name, SemanticType::SimpleType(ty));
         }
     }
+
+    pub fn current_scope_insert_proc(
+        &mut self,
+        name: Name,
+        args_type: Option<Vec<(Name, Type)>>,
+        return_type: Option<Type>,
+    ) {
+        if let Some(current) = self.scopes.top_mut() {
+            current.insert(
+                name,
+                SemanticType::ProcType(ProcType {
+                    args_type,
+                    return_type,
+                }),
+            );
+        }
+    }
+
+    pub fn find_simple_type(&self, name: &str) -> Type {
+        for s in self.scopes.iter().rev() {
+            if let Some(t) = s.get(name)
+                && let SemanticType::SimpleType(ty) = t
+            {
+                return ty.clone();
+            }
+        }
+        Type::Error
+    }
+
+    pub fn find_proc_type(&self, name: &str) -> ProcType {
+        for s in self.scopes.iter().rev() {
+            if let Some(t) = s.get(name)
+                && let SemanticType::ProcType(pt) = t
+            {
+                return pt.clone();
+            }
+        }
+        ProcType::default()
+    }
+
+    // Error helper
 
     fn insert_error(&mut self, error_type: TypeErrorType, _span: Option<Span>) {
         self.errors.push(TypeError::new(error_type));
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum SemanticType {
+    SimpleType(Type),
+    ProcType(ProcType),
+}
+
+// Type Errors
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeError {
+    error_type: TypeErrorType,
+    span: Option<Span>,
+}
+
+impl TypeError {
+    pub fn new(error_type: TypeErrorType) -> Self {
+        Self {
+            error_type,
+            span: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypeErrorType {
+    TypeMismatchDecl,
+    TypeMismatchGlobalDecl,
+    TypeMismatchAssign,
+    TypeMismatchProcArgument,
+
+    ConditionNotBool,
+
+    OpNegMismatch,
+    OpTildeMismatch,
+    OpLNotMismatch,
+    OpArithMismatch,
+    OpBitwiseMismatch,
+    OpCompareMismatch,
+    OpLogicalMismatch,
+
+    ReturnValueMissing,
+    ReturnTypeMismatch,
+    ReturnTypeMismatchSub,
 }

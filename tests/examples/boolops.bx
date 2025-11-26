@@ -18,3 +18,7 @@ def main() {
   if (! (x == x)) { print(13); } // false
   if (! (x != x)) { print(14); } // true
 }
+
+def print(x : int) {
+
+}

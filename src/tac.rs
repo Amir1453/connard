@@ -1,168 +1,511 @@
-use crate::ast::Operator;
-use serde::{Serialize, Serializer};
-use std::{collections::HashMap, sync::LazyLock};
+use std::{
+    fmt,
+    ops::{Deref, DerefMut},
+};
 
-#[derive(Serialize)]
-pub struct TACWrapper {
-    proc: &'static str,
-    body: Vec<TAC>,
+use crate::{
+    ast::Operator,
+    types::{InstBlock, Name},
+};
+// use serde::{Serialize, Serializer};
+// use std::{collections::HashMap, sync::LazyLock};
+
+#[derive(Clone, PartialEq)]
+pub struct CUTAC(pub Vec<TACDeclaration>);
+
+#[derive(Clone, PartialEq)]
+pub enum TACDeclaration {
+    GlobalVarDecl(GlobalVarDecl),
+    ProcDecl(ProcDecl),
 }
 
-impl TACWrapper {
-    pub fn new(body: Vec<TAC>) -> Self {
-        Self {
-            proc: "@main",
-            body,
-        }
-    }
+#[derive(Clone, PartialEq)]
+pub struct GlobalVarDecl {
+    pub name: Name,
+    pub value: i64,
 }
 
-#[derive(Serialize, Clone, Debug, PartialEq)]
-pub struct TAC {
-    opcode: TACOpcode,
-    args: TACArgs,
-    result: Option<Temp>,
+#[derive(Clone, PartialEq)]
+pub struct ProcDecl {
+    pub name: Name,
+    arguments: Option<Vec<Name>>,
+    pub instructions: InstBlock,
 }
 
-impl TAC {
-    pub fn new(opcode: TACOpcode, args: TACArgs, result: Option<Temp>) -> Self {
-        Self {
-            opcode,
-            args,
-            result,
-        }
-    }
+#[derive(Clone, PartialEq)]
+pub enum TACInst {
+    Const {
+        destination: TACTemp,
+        constant: i64,
+    },
+
+    Copi {
+        destination: TACTemp,
+        source: TACTemp,
+    },
+
+    LabelDecl(Label),
+
+    UnconditionalJump(Label),
+
+    ConditionalJump {
+        opcode: TACJumpOpcode,
+        condition: TACTemp,
+        destination: Label,
+    },
+
+    UnaryOperation {
+        opcode: TACUnaryOpcode,
+        operand: TACTemp,
+        result: TACTemp,
+    },
+
+    BinaryOperation {
+        opcode: TACBinaryOpcode,
+        lhs: TACTemp,
+        rhs: TACTemp,
+        result: TACTemp,
+    },
+
+    Parameter {
+        nth_param: usize,
+        source_temp: TACTemp,
+    },
+
+    ProcCall {
+        proc_name: Name,
+        arg_count: usize,
+        result: TACTemp,
+    },
+
+    Return(Option<TACTemp>),
+
+    Nop,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum TACArgs {
-    Temporaries((Temp, Temp)),
-    Temporary(Temp),
-    TempAndLabel((Temp, i64)),
-    Number(i64),
-    Label(i64),
+#[derive(Clone, PartialEq)]
+pub enum TACTemp {
+    Temp(i64),
+    NamedTemp(Name),
+    GlobalVar(Name),
 }
 
-impl Serialize for TACArgs {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            TACArgs::Temporaries((v, u)) => vec![v, u].serialize(s),
-            TACArgs::Temporary(v) => vec![v].serialize(s),
-            TACArgs::TempAndLabel((v, u)) => {
-                vec![format!("%{}", v.0), format!("%.L{}", u)].serialize(s)
-            }
-            TACArgs::Number(n) => vec![n].serialize(s),
-            TACArgs::Label(l) => vec![format!("%.L{}", l)].serialize(s),
-        }
-    }
+#[derive(Clone, PartialEq, Hash, Eq)]
+pub enum Label {
+    Numeric(i64),
+    Named(Name),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Temp(pub i64);
-
-impl Serialize for Temp {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let key = format!("%{}", self.0);
-        key.serialize(s)
-    }
-}
-
-#[derive(Hash, Clone, Debug, PartialEq, Eq)]
-pub enum TACOpcode {
-    COPY,
-    PRINT,
-    CONST,
-    LABEL,
-
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    MOD,
-    NEG,
-
-    OR,
-    XOR,
-    AND,
-    NOT,
-    SHL,
-    SHR,
-
-    JMP,
+#[derive(Clone, PartialEq)]
+pub enum TACJumpOpcode {
     JZ,
     JNZ,
     JL,
     JNL,
     JLE,
     JNLE,
-
-    ERROR,
 }
 
-const OPCODES: LazyLock<HashMap<TACOpcode, &'static str>> = LazyLock::new(|| {
-    use TACOpcode::*;
-    HashMap::from([
-        (COPY, "copy"),
-        (PRINT, "print"),
-        (CONST, "const"),
-        (LABEL, "label"),
-        (ADD, "add"),
-        (SUB, "sub"),
-        (MUL, "mul"),
-        (DIV, "div"),
-        (MOD, "mod"),
-        (NEG, "neg"),
-        (OR, "or"),
-        (XOR, "xor"),
-        (AND, "and"),
-        (NOT, "not"),
-        (SHL, "shl"),
-        (SHR, "shr"),
-        (JMP, "jmp"),
-        (JZ, "jz"),
-        (JNZ, "jnz"),
-        (JL, "jl"),
-        (JNL, "jnl"),
-        (JLE, "jle"),
-        (JNLE, "jnle"),
-        (ERROR, "error"),
-    ])
-});
+#[derive(Clone, PartialEq)]
+pub enum TACUnaryOpcode {
+    NEG,
+    NOT,
+}
 
-impl Serialize for TACOpcode {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let key = OPCODES[&self];
-        key.serialize(s)
+#[derive(Clone, PartialEq)]
+pub enum TACBinaryOpcode {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
+
+    AND,
+    OR,
+    XOR,
+    SHL,
+    SHR,
+}
+
+impl CUTAC {
+    pub fn new() -> Self {
+        Self(Vec::new())
     }
 }
 
-impl Into<TACOpcode> for Operator {
-    fn into(self) -> TACOpcode {
-        use Operator::*;
-        use TACOpcode::*;
+impl Deref for CUTAC {
+    type Target = Vec<TACDeclaration>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CUTAC {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl fmt::Display for CUTAC {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for decl in &self.0 {
+            write!(f, "{}", decl)?;
+        }
+        write!(f, "")
+    }
+}
+
+impl fmt::Display for TACDeclaration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            TACDeclaration::GlobalVarDecl(decl) => write!(f, "{}", decl),
+            TACDeclaration::ProcDecl(decl) => write!(f, "{}", decl),
+        }
+    }
+}
+
+impl GlobalVarDecl {
+    pub fn new(name: Name, value: i64) -> Self {
+        Self { name, value }
+    }
+}
+
+impl fmt::Display for GlobalVarDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "var @{} = {};", self.name, self.value)
+    }
+}
+
+impl ProcDecl {
+    pub fn new(name: Name, arguments: Option<Vec<Name>>, instructions: InstBlock) -> Self {
+        Self {
+            name,
+            arguments,
+            instructions,
+        }
+    }
+}
+
+impl fmt::Display for ProcDecl {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.arguments {
+            Some(args) if !args.is_empty() => {
+                let names: Vec<String> = args.iter().map(|nt| format!("%{}", nt)).collect();
+                writeln!(f, "proc @{}({}):", self.name, names.join(", "))?;
+            }
+            _ => writeln!(f, "proc @{}():", self.name)?,
+        }
+
+        for inst in &self.instructions {
+            if matches!(inst, TACInst::LabelDecl(_)) {
+                writeln!(f, "  {}", inst)?;
+            } else {
+                writeln!(f, "    {}", inst)?;
+            }
+        }
+
+        write!(f, "")
+    }
+}
+
+impl Default for TACInst {
+    fn default() -> Self {
+        Self::Nop
+    }
+}
+
+impl fmt::Debug for TACInst {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for TACInst {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TACInst::Const {
+                destination,
+                constant,
+            } => write!(f, "{} = const {};", destination, constant),
+
+            TACInst::Copi {
+                destination,
+                source,
+            } => write!(f, "{} = copy {};", destination, source),
+
+            TACInst::LabelDecl(label) => write!(f, "{}:", label),
+
+            TACInst::UnconditionalJump(label) => write!(f, "jmp {};", label),
+
+            TACInst::ConditionalJump {
+                opcode,
+                condition,
+                destination,
+            } => write!(f, "{} {}, {};", opcode, condition, destination),
+
+            TACInst::UnaryOperation {
+                opcode,
+                operand,
+                result,
+            } => write!(f, "{} = {} {}", result, opcode, operand),
+
+            TACInst::BinaryOperation {
+                opcode,
+                lhs,
+                rhs,
+                result,
+            } => write!(f, "{} = {} {}, {}", result, opcode, lhs, rhs),
+
+            TACInst::Parameter {
+                nth_param,
+                source_temp,
+            } => write!(f, "param {}, {}", nth_param, source_temp),
+
+            TACInst::ProcCall {
+                proc_name,
+                arg_count,
+                result,
+            } => write!(f, "{} = call @{}, {}", result, proc_name, arg_count),
+
+            TACInst::Return(tactemp) => match tactemp {
+                Some(temp) => write!(f, "ret {};", temp),
+                None => write!(f, "ret;"),
+            },
+
+            TACInst::Nop => write!(f, "nop;"),
+        }
+    }
+}
+
+impl fmt::Display for TACTemp {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TACTemp::Temp(temp) => write!(f, "%{}", temp),
+            TACTemp::NamedTemp(ntemp) => write!(f, "%{}", ntemp),
+            TACTemp::GlobalVar(gtemp) => write!(f, "@{}", gtemp),
+        }
+    }
+}
+
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Label::Numeric(num) => write!(f, "%.L{}", num),
+            Label::Named(name) => write!(f, "%.L{}", name),
+        }
+    }
+}
+
+impl From<Operator> for TACJumpOpcode {
+    fn from(value: Operator) -> Self {
+        use Operator::*;
+        use TACJumpOpcode::*;
+        match value {
+            Equal => JZ,
+            NEqual => JNZ,
+            L => JL,
+            LTE => JLE,
+            G => JNLE,
+            GTE => JNL,
+            _ => todo!(),
+        }
+    }
+}
+
+impl From<Operator> for TACUnaryOpcode {
+    fn from(value: Operator) -> Self {
+        use Operator::*;
+        use TACUnaryOpcode::*;
+        match value {
+            Neg => NEG,
+            Tilde => NOT,
+            _ => todo!(),
+        }
+    }
+}
+
+impl From<Operator> for TACBinaryOpcode {
+    fn from(value: Operator) -> Self {
+        use Operator::*;
+        use TACBinaryOpcode::*;
+        match value {
             Plus => ADD,
             Minus => SUB,
             Star => MUL,
             Slash => DIV,
             Mod => MOD,
-            Neg => NEG,
+            Ampersand => AND,
             Pipe => OR,
             Caret => XOR,
-            Ampersand => AND,
-            Tilde => NOT,
             LShift => SHL,
             RShift => SHR,
-            _ => ERROR,
+            _ => todo!(),
         }
     }
 }
+
+impl fmt::Display for TACJumpOpcode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::JZ => "jz",
+            Self::JNZ => "jnz",
+            Self::JL => "jl",
+            Self::JNL => "jnl",
+            Self::JLE => "jle",
+            Self::JNLE => "jnle",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for TACUnaryOpcode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::NEG => "neg",
+            Self::NOT => "not",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for TACBinaryOpcode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::ADD => "add",
+            Self::SUB => "sub",
+            Self::MUL => "mul",
+            Self::DIV => "div",
+            Self::MOD => "mod",
+            Self::AND => "and",
+            Self::OR => "or",
+            Self::XOR => "xor",
+            Self::SHL => "shl",
+            Self::SHR => "shr",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+// #[derive(Hash, Clone, Debug, PartialEq, Eq)]
+// pub enum TACOpcode {
+//     COPY,
+//     CONST,
+//     LABEL,
+//     PARAM,
+//     CALL,
+//     RET,
+//
+//     ADD,
+//     SUB,
+//     MUL,
+//     DIV,
+//     MOD,
+//     NEG,
+//
+//     OR,
+//     XOR,
+//     AND,
+//     NOT,
+//     SHL,
+//     SHR,
+//
+//     JMP,
+//     JZ,
+//     JNZ,
+//     JL,
+//     JNL,
+//     JLE,
+//     JNLE,
+//
+//     ERROR,
+// }
+//
+// const OPCODES: LazyLock<HashMap<TACOpcode, &'static str>> = LazyLock::new(|| {
+//     use TACOpcode::*;
+//     HashMap::from([
+//         (COPY, "copy"),
+//         (CONST, "const"),
+//         (LABEL, "label"),
+//         (ADD, "add"),
+//         (SUB, "sub"),
+//         (MUL, "mul"),
+//         (DIV, "div"),
+//         (MOD, "mod"),
+//         (NEG, "neg"),
+//         (OR, "or"),
+//         (XOR, "xor"),
+//         (AND, "and"),
+//         (NOT, "not"),
+//         (SHL, "shl"),
+//         (SHR, "shr"),
+//         (JMP, "jmp"),
+//         (JZ, "jz"),
+//         (JNZ, "jnz"),
+//         (JL, "jl"),
+//         (JNL, "jnl"),
+//         (JLE, "jle"),
+//         (JNLE, "jnle"),
+//         (ERROR, "error"),
+//     ])
+// });
+//
+// impl Into<TACOpcode> for Operator {
+//     fn into(self) -> TACOpcode {
+//         use Operator::*;
+//         use TACOpcode::*;
+//         match self {
+//             Plus => ADD,
+//             Minus => SUB,
+//             Star => MUL,
+//             Slash => DIV,
+//             Mod => MOD,
+//             Neg => NEG,
+//             Pipe => OR,
+//             Caret => XOR,
+//             Ampersand => AND,
+//             Tilde => NOT,
+//             LShift => SHL,
+//             RShift => SHR,
+//             _ => ERROR,
+//         }
+//     }
+// }
+
+// impl Serialize for TACArgs {
+//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         match self {
+//             TACArgs::Temporaries((v, u)) => vec![v, u].serialize(s),
+//             TACArgs::Temporary(v) => vec![v].serialize(s),
+//             TACArgs::TempAndLabel((v, u)) => {
+//                 vec![format!("%{}", v.0), format!("%.L{}", u)].serialize(s)
+//             }
+//             TACArgs::Number(n) => vec![n].serialize(s),
+//             TACArgs::Label(l) => vec![format!("%.L{}", l)].serialize(s),
+//         }
+//     }
+// }
+
+// impl Serialize for Temp {
+//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         let key = format!("%{}", self.0);
+//         key.serialize(s)
+//     }
+// }
+//
+// impl Serialize for TACOpcode {
+//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         let key = OPCODES[&self];
+//         key.serialize(s)
+//     }
+// }

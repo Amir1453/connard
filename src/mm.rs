@@ -1,13 +1,16 @@
 use crate::ast::*;
 use crate::tac::*;
-use crate::types::LoopStack;
+use crate::types::InstBlock;
+use crate::types::Name;
+use crate::types::Stack;
+use crate::types::Type;
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq)]
 pub struct MM {
-    vars: HashMap<String, Temp>,
-    tacs: Vec<TAC>,
-    loop_stack: LoopStack,
+    vars: Stack<HashMap<Name, TACTemp>>,
+    cutac: CUTAC,
+    proc_instructions: InstBlock,
+    loop_stack: Stack<(Label, Label)>,
     temp_counter: i64,
     label_counter: i64,
 }
@@ -15,273 +18,431 @@ pub struct MM {
 impl MM {
     fn new() -> Self {
         Self {
-            vars: HashMap::new(),
-            tacs: Vec::new(),
-            loop_stack: LoopStack::new(),
+            vars: Stack::new_with(HashMap::new()),
+            cutac: CUTAC::new(),
+            proc_instructions: Vec::new(),
+            loop_stack: Stack::default(),
             temp_counter: -1,
             label_counter: -1,
         }
     }
 
-    pub fn munch(program: &Program) -> Vec<TAC> {
+    pub fn munch(program: Program) -> CUTAC {
         let mut mm = MM::new();
         mm.munch_program(program);
-        mm.tacs
+        mm.cutac
     }
 
-    fn munch_program(&mut self, program: &Program) {
-        self.munch_block(program);
+    fn munch_program(&mut self, program: Program) {
+        for decl in program.0 {
+            match decl {
+                Declaration::Variable(var) => {
+                    self.munch_global_variable(*var);
+                }
+
+                Declaration::Proc {
+                    proc_name,
+                    proc_args,
+                    return_type: _,
+                    block,
+                } => {
+                    self.vars.push(HashMap::new());
+
+                    let arguments: Option<Vec<Name>> =
+                        proc_args.map(|args| args.into_iter().map(|(name, _ty)| name).collect());
+
+                    arguments.iter().flat_map(|v| v.iter()).for_each(|name| {
+                        self.current_vars_insert(name.clone(), TACTemp::NamedTemp(name.clone()))
+                    });
+
+                    self.munch_block(*block);
+                    let instructions = std::mem::take(&mut self.proc_instructions);
+                    let proc_decl = ProcDecl::new(proc_name, arguments, instructions);
+                    self.cutac.push(TACDeclaration::ProcDecl(proc_decl));
+
+                    self.vars.pop();
+                }
+            }
+        }
     }
 
-    fn munch_block(&mut self, block: &Block) {
-        for stmt in &block.0 {
+    fn munch_global_variable(&mut self, var: Variable) {
+        for (name, value_expr) in var.names.into_iter().zip(var.values.into_iter()) {
+            let value = match *value_expr {
+                Expression::Number(num) => num,
+                Expression::Bool(boo) => boo.into(),
+                _ => -42,
+            };
+            let global = GlobalVarDecl::new(name.clone(), value);
+            self.cutac.push(TACDeclaration::GlobalVarDecl(global));
+
+            self.current_vars_insert(name.clone(), TACTemp::GlobalVar(name));
+        }
+    }
+
+    fn munch_block(&mut self, block: Block) {
+        for stmt in block.0 {
             self.munch_statement(stmt);
         }
     }
 
-    fn munch_statement(&mut self, stmt: &Statement) {
-        use TACArgs::*;
-        use TACOpcode::*;
+    fn munch_statement(&mut self, stmt: Statement) {
+        use TACInst::*;
 
         match stmt {
-            Statement::Variable { name, value, ty: _ } => {
-                let fresh_temporary = self.fresh_temp();
-                self.vars.insert(name.into(), fresh_temporary);
-                let munched_value = self.munch_expression(value);
-                self.emit(COPY, Temporary(munched_value), Some(fresh_temporary));
-            }
-
-            Statement::Block(block) => {
-                self.munch_block(block);
+            Statement::Variable(variable) => {
+                self.munch_variable(*variable);
             }
 
             Statement::Assignment { name, value } => {
-                let munched_value = self.munch_expression(value);
-                self.emit(COPY, Temporary(munched_value), Some(self.vars[name]));
+                let temp = self.munch_expression(*value);
+                self.emit(Copi {
+                    destination: self.current_var_get(&name),
+                    source: temp,
+                });
             }
 
-            Statement::Print { value } => {
-                let munched_value = self.munch_expression(value);
-                self.emit(PRINT, Temporary(munched_value), None);
+            Statement::Block(block) => {
+                self.munch_block(*block);
             }
+
+            Statement::Eval(expression) => {
+                self.munch_expression(*expression);
+            }
+
+            Statement::Return(expression) => match expression {
+                Some(exp) => {
+                    let temp = self.munch_expression(*exp);
+                    self.emit(Return(Some(temp)));
+                }
+                None => self.emit(Return(None)),
+            },
 
             Statement::If {
                 condition,
                 then_block,
                 else_branch,
             } => {
-                let label_then = self.fresh_label();
-                let label_else = self.fresh_label();
-                let label_end = self.fresh_label();
+                let tlabel = self.fresh_label();
+                let flabel = self.fresh_label();
+                let olabel = self.fresh_label();
 
-                self.munch_bool_expression(condition, label_then, label_else);
+                self.munch_boolean_expression(*condition, tlabel.clone(), flabel.clone());
+                self.emit_label(tlabel);
 
-                self.emit_label(label_then);
-                self.munch_block(then_block);
-                self.emit(JMP, Label(label_end), None);
+                self.munch_block(*then_block);
+                self.emit(UnconditionalJump(olabel.clone()));
 
-                self.emit_label(label_else);
-                if let Some(ebr) = else_branch {
-                    self.munch_statement(ebr);
+                self.emit_label(flabel);
+                if let Some(elise) = else_branch {
+                    self.munch_statement(*elise);
                 }
-
-                self.emit_label(label_end);
+                self.emit_label(olabel);
             }
 
             Statement::While { condition, block } => {
-                let label_head = self.fresh_label();
-                let label_body = self.fresh_label();
-                let label_end = self.fresh_label();
+                let clabel = self.fresh_label();
+                let blabel = self.fresh_label();
+                let olabel = self.fresh_label();
 
-                self.emit_label(label_head);
-                self.munch_bool_expression(condition, label_body, label_end);
-                self.emit_label(label_body);
+                self.loop_stack.push((clabel.clone(), olabel.clone()));
 
-                self.loop_stack.push_loop(label_head, label_end);
-                self.munch_block(block);
-                self.loop_stack.pop_loop();
+                self.emit_label(clabel);
+                self.munch_boolean_expression(*condition, blabel.clone(), olabel.clone());
 
-                self.emit(JMP, Label(label_head), None);
-                self.emit_label(label_end);
+                self.emit_label(blabel);
+                self.munch_block(*block);
+
+                self.emit_label(olabel);
+
+                self.loop_stack.pop();
             }
 
             Statement::Jump(state) => match state {
-                JumpState::Continue => {
-                    if let Some((cont, _)) = self.loop_stack.current_loop() {
-                        self.emit(JMP, Label(cont), None);
+                JumpState::Break => {
+                    if let Some((_, brk)) = self.loop_stack.top().cloned() {
+                        self.emit(UnconditionalJump(brk))
                     }
                 }
 
-                JumpState::Break => {
-                    if let Some((_, brk)) = self.loop_stack.current_loop() {
-                        self.emit(JMP, Label(brk), None);
+                JumpState::Continue => {
+                    if let Some((cont, _)) = self.loop_stack.top().cloned() {
+                        self.emit(UnconditionalJump(cont))
                     }
                 }
             },
         }
     }
 
-    fn munch_expression(&mut self, expr: &Expression) -> Temp {
-        use TACArgs::*;
-        use TACOpcode::*;
+    fn munch_variable(&mut self, var: Variable) {
+        use TACInst::Copi;
 
-        match expr {
-            Expression::Variable(name) => self.vars[name],
+        for (name, value_expr) in var.names.into_iter().zip(var.values.into_iter()) {
+            let fresh = TACTemp::Temp(self.fresh_temp());
+            self.current_vars_insert(name, fresh.clone());
 
-            Expression::Number(value) => {
-                let target = self.fresh_temp();
-                self.emit(CONST, Number(value.clone()), Some(target));
-                target
-            }
+            let temp = self.munch_expression(*value_expr);
+            self.emit(Copi {
+                destination: fresh,
+                source: temp,
+            });
+        }
+    }
 
-            Expression::Bool(b) => {
-                let target = self.fresh_temp();
-                let val = if *b { 1 } else { 0 };
-                self.emit(CONST, Number(val), Some(target));
-                target
-            }
+    fn munch_expression(&mut self, expr: Expression) -> TACTemp {
+        use TACInst::*;
 
-            Expression::BinaryOperation {
-                lhs, operator, rhs, ..
-            } => {
-                let target = self.fresh_temp();
-                let munched_lhs = self.munch_expression(lhs);
-                let munched_rhs = self.munch_expression(rhs);
-                println!(
-                    "FROM: {:?} INTO {:?}",
+        if expr.get_type() == Type::Bool {
+            let temp = TACTemp::Temp(self.fresh_temp());
+            let tlabel = self.fresh_label();
+            let flabel = self.fresh_label();
+
+            self.emit(Const {
+                destination: temp.clone(),
+                constant: 0,
+            });
+
+            self.munch_boolean_expression(expr, tlabel.clone(), flabel.clone());
+            self.emit_label(tlabel);
+
+            self.emit(Const {
+                destination: temp.clone(),
+                constant: 1,
+            });
+            self.emit_label(flabel);
+
+            temp
+        } else {
+            match expr {
+                Expression::Variable(name, ..) => self.current_var_get(&name),
+
+                Expression::Number(num) => {
+                    let temp = TACTemp::Temp(self.fresh_temp());
+                    self.emit(Const {
+                        destination: temp.clone(),
+                        constant: num,
+                    });
+                    temp
+                }
+
+                Expression::BinaryOperation {
+                    lhs,
                     operator,
-                    Into::<TACOpcode>::into(*operator)
-                );
-                self.emit(
-                    operator.clone().into(),
-                    Temporaries((munched_lhs, munched_rhs)),
-                    Some(target),
-                );
-                target
-            }
+                    rhs,
+                    ty: _,
+                } => {
+                    let temp = TACTemp::Temp(self.fresh_temp());
+                    let ltmp = self.munch_expression(*lhs);
+                    let rtmp = self.munch_expression(*rhs);
 
-            Expression::UnaryOperation {
-                operator, value, ..
-            } => {
-                let target = self.fresh_temp();
-                let munched_value = self.munch_expression(value);
-                println!("FROM: {:?} INTO", operator);
-                self.emit(
-                    operator.clone().into(),
-                    Temporary(munched_value),
-                    Some(target),
-                );
-                target
+                    self.emit(BinaryOperation {
+                        opcode: operator.into(),
+                        lhs: ltmp,
+                        rhs: rtmp,
+                        result: temp.clone(),
+                    });
+
+                    temp
+                }
+
+                Expression::UnaryOperation {
+                    operator,
+                    value,
+                    ty: _,
+                } => {
+                    let temp = TACTemp::Temp(self.fresh_temp());
+                    let utmp = self.munch_expression(*value);
+
+                    self.emit(UnaryOperation {
+                        opcode: operator.into(),
+                        operand: utmp,
+                        result: temp.clone(),
+                    });
+
+                    temp
+                }
+
+                Expression::ProcCall {
+                    proc_name,
+                    proc_args,
+                    ..
+                } => {
+                    let arg_count = proc_args.as_ref().map(|v| v.len()).unwrap_or(0);
+
+                    for (i, exp) in proc_args.into_iter().flatten().enumerate() {
+                        let temp = self.munch_expression(*exp);
+                        self.emit(Parameter {
+                            nth_param: i + 1,
+                            source_temp: temp,
+                        });
+                    }
+
+                    let result = TACTemp::Temp(self.fresh_temp());
+                    self.emit(ProcCall {
+                        proc_name,
+                        arg_count,
+                        result: result.clone(),
+                    });
+
+                    result
+                }
+
+                _ => todo!(),
             }
         }
     }
 
-    fn munch_bool_expression(&mut self, bool_expr: &Expression, label_true: i64, label_false: i64) {
-        use TACArgs::*;
-        use TACOpcode::*;
+    fn munch_boolean_expression(&mut self, expr: Expression, tlabel: Label, flabel: Label) {
+        use TACInst::*;
+        use TACJumpOpcode::*;
 
-        match bool_expr {
-            Expression::Bool(boolo) => {
-                if *boolo {
-                    self.emit(JMP, Label(label_true), None);
-                } else {
-                    self.emit(JMP, Label(label_false), None);
-                }
+        match expr {
+            Expression::Variable(name, ..) => {
+                let temp = self.current_var_get(&name);
+
+                self.emit(ConditionalJump {
+                    opcode: JZ,
+                    condition: temp,
+                    destination: flabel,
+                });
+
+                self.emit(UnconditionalJump(tlabel));
             }
+
+            Expression::Bool(boo) => match boo {
+                true => self.emit(UnconditionalJump(tlabel)),
+                false => self.emit(UnconditionalJump(flabel)),
+            },
 
             Expression::BinaryOperation {
                 lhs, operator, rhs, ..
             } => {
                 use Operator::*;
+                use TACBinaryOpcode::SUB;
 
                 match operator {
                     Equal | NEqual | L | LTE | G | GTE => {
-                        let cmp_temp = self.fresh_temp();
-                        let munched_lhs = self.munch_expression(lhs);
-                        let munched_rhs = self.munch_expression(rhs);
+                        let ltmp = self.munch_expression(*lhs);
+                        let rtmp = self.munch_expression(*rhs);
+                        let temp = TACTemp::Temp(self.fresh_temp());
 
-                        self.emit(SUB, Temporaries((munched_lhs, munched_rhs)), Some(cmp_temp));
+                        self.emit(BinaryOperation {
+                            opcode: SUB,
+                            lhs: ltmp,
+                            rhs: rtmp,
+                            result: temp.clone(),
+                        });
 
-                        match operator {
-                            Equal => {
-                                println!("I am at Equal");
-                                self.emit(JZ, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            NEqual => {
-                                println!("I am at NEqual");
-                                self.emit(JNZ, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            L => {
-                                println!("I am at L");
-                                self.emit(JL, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            LTE => {
-                                println!("I am at LTE");
-                                self.emit(JLE, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            G => {
-                                println!("I am at G");
-                                self.emit(JNLE, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            GTE => {
-                                println!("I am at GTE");
-                                self.emit(JNL, TempAndLabel((cmp_temp, label_true)), None);
-                                self.emit(JMP, Label(label_false), None);
-                            }
-                            _ => {}
-                        }
+                        self.emit(ConditionalJump {
+                            opcode: operator.into(),
+                            condition: temp,
+                            destination: tlabel,
+                        });
+                        self.emit(UnconditionalJump(flabel));
                     }
 
                     LAnd => {
-                        println!("I am at LAnd");
-                        let mid = self.fresh_label();
-                        self.munch_bool_expression(lhs, mid, label_false);
-                        self.emit(LABEL, Label(mid), None);
-                        self.munch_bool_expression(rhs, label_true, label_false);
+                        let olabel = self.fresh_label();
+
+                        self.munch_boolean_expression(*lhs, olabel.clone(), flabel.clone());
+                        self.emit_label(olabel);
+                        self.munch_boolean_expression(*rhs, tlabel, flabel);
                     }
 
                     LOr => {
-                        println!("I am at LOr");
-                        let mid = self.fresh_label();
-                        self.munch_bool_expression(lhs, label_true, mid);
-                        self.emit(LABEL, Label(mid), None);
-                        self.munch_bool_expression(rhs, label_true, label_false);
+                        let olabel = self.fresh_label();
+                        self.munch_boolean_expression(*lhs, tlabel.clone(), olabel.clone());
+                        self.emit_label(olabel);
+                        self.munch_boolean_expression(*rhs, tlabel, flabel);
                     }
+
                     _ => {}
                 }
             }
 
-            // Only Unary Bool Operation is the LNot
-            Expression::UnaryOperation { value, .. } => {
-                println!("I am at LNot");
-                self.munch_bool_expression(value, label_false, label_true);
+            Expression::UnaryOperation {
+                operator, value, ..
+            } => {
+                use Operator::*;
+                match &operator {
+                    LNot => {
+                        self.munch_boolean_expression(*value, flabel, tlabel);
+                    }
+
+                    _ => {}
+                }
+            }
+
+            Expression::ProcCall {
+                proc_name,
+                proc_args,
+                ..
+            } => {
+                let arg_count = proc_args.as_ref().map(|v| v.len()).unwrap_or(0);
+
+                for (i, exp) in proc_args.into_iter().flatten().enumerate() {
+                    let temp = self.munch_expression(*exp);
+                    self.emit(Parameter {
+                        nth_param: i + 1,
+                        source_temp: temp,
+                    });
+                }
+
+                let result = TACTemp::Temp(self.fresh_temp());
+                self.emit(ProcCall {
+                    proc_name,
+                    arg_count,
+                    result: result.clone(),
+                });
+
+                self.emit(ConditionalJump {
+                    opcode: JZ,
+                    condition: result,
+                    destination: flabel,
+                });
+                self.emit(UnconditionalJump(tlabel));
             }
 
             _ => {}
         }
     }
 
-    fn fresh_temp(&mut self) -> Temp {
+    fn fresh_temp(&mut self) -> i64 {
         self.temp_counter += 1;
-        Temp(self.temp_counter)
+        self.temp_counter
     }
 
-    fn fresh_label(&mut self) -> i64 {
+    fn fresh_label(&mut self) -> Label {
         self.label_counter += 1;
-        self.label_counter
+        Label::Numeric(self.label_counter)
     }
 
-    fn emit(&mut self, opcode: TACOpcode, args: TACArgs, result: Option<Temp>) {
-        self.tacs.push(TAC::new(opcode, args, result));
+    fn emit(&mut self, inst: TACInst) {
+        self.proc_instructions.push(inst);
     }
 
-    fn emit_label(&mut self, label: i64) {
-        self.tacs
-            .push(TAC::new(TACOpcode::LABEL, TACArgs::Label(label), None));
+    fn emit_label(&mut self, label: Label) {
+        self.proc_instructions.push(TACInst::LabelDecl(label));
+    }
+
+    // Stack helpers
+
+    pub fn current_vars_insert(&mut self, name: Name, temp: TACTemp) {
+        if let Some(current) = self.vars.top_mut() {
+            current.insert(name, temp);
+        }
+    }
+
+    // pub fn current_var_get(&self, name: &Name) -> TACTemp {
+    //     self.vars.top().unwrap()[name].clone()
+    // }
+
+    pub fn current_var_get(&self, name: &Name) -> TACTemp {
+        for scope in self.vars.iter().rev() {
+            if let Some(t) = scope.get(name) {
+                return t.clone();
+            }
+        }
+        panic!("undefined variable {:?}", name);
     }
 }

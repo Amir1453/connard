@@ -1,7 +1,13 @@
-def main() {
+var x = 0 : int;
+
+def main() : int {
   var x = 0 : int;
   var y = 0 : int;
   var z = 0 : int;
+
+  if (x > 5) {
+
+  }
 
   x = 10;
   y = 42;
@@ -14,4 +20,13 @@ def main() {
   print(x ^ z);
   print(~x);
   print(~z);
+}
+
+def cat(a : int, b : int, c : bool) : int {
+  var x = 0 : int;
+  return 5;
+}
+
+def print() {
+  return;
 }

@@ -1,170 +1,79 @@
-/* Type Type */
+use crate::tac::TACInst;
+use compact_str::CompactString;
+use std::vec;
 
-use std::collections::{HashMap, HashSet};
+pub type Span = (usize, usize);
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+pub type Name = CompactString;
+
+pub type Promise<T> = Option<T>;
+
+pub type InstBlock = Vec<TACInst>;
+
+// Typechecking types
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Int,
     Bool,
     Void,
+
+    Promised,
     Error,
 }
 
-/* Scope Types */
-
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypeScopes {
-    scopes: Vec<HashMap<String, Type>>,
+pub struct ProcType {
+    pub args_type: Option<Vec<(Name, Type)>>,
+    pub return_type: Option<Type>,
 }
 
-impl TypeScopes {
-    pub fn new() -> Self {
+impl Default for ProcType {
+    fn default() -> Self {
         Self {
-            scopes: vec![HashMap::new()],
+            args_type: None,
+            return_type: None,
         }
-    }
-
-    pub fn push_scope(&mut self) {
-        self.scopes.push(HashMap::new());
-    }
-
-    pub fn pop_scope(&mut self) {
-        self.scopes.pop();
-    }
-
-    pub fn current_insert(&mut self, name: String, ty: Type) {
-        let current = self.scopes.last_mut().unwrap();
-        current.insert(name, ty);
-    }
-
-    pub fn find_type(&self, name: &str) -> Option<Type> {
-        for s in self.scopes.iter().rev() {
-            if let Some(t) = s.get(name) {
-                return Some(*t);
-            }
-        }
-        None
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct VarScopes {
-    scopes: Vec<HashSet<String>>,
+// Scope
+
+#[derive(Clone, PartialEq)]
+pub struct Stack<T> {
+    stack: Vec<T>,
 }
 
-impl VarScopes {
-    pub fn new() -> Self {
+impl<T> Stack<T> {
+    pub fn new_with(t: T) -> Self {
+        Self { stack: vec![t] }
+    }
+
+    pub fn push(&mut self, t: T) {
+        self.stack.push(t);
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        self.stack.pop()
+    }
+
+    pub fn top(&self) -> Option<&T> {
+        self.stack.last()
+    }
+
+    pub fn top_mut(&mut self) -> Option<&mut T> {
+        self.stack.last_mut()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.stack.iter()
+    }
+}
+
+impl<T> Default for Stack<T> {
+    fn default() -> Self {
         Self {
-            scopes: vec![HashSet::new()],
+            stack: Default::default(),
         }
     }
-
-    pub fn push_scope(&mut self) {
-        self.scopes.push(HashSet::new());
-    }
-
-    pub fn pop_scope(&mut self) {
-        self.scopes.pop();
-    }
-
-    pub fn current_contains(&self, name: &str) -> bool {
-        self.scopes.last().map_or(false, |s| s.contains(name))
-    }
-
-    pub fn any_contains(&self, name: &str) -> bool {
-        for s in self.scopes.iter().rev() {
-            if s.contains(name) {
-                return true;
-            }
-        }
-        false
-    }
-
-    pub fn current_insert(&mut self, name: String) {
-        let current = self.scopes.last_mut().unwrap();
-        current.insert(name);
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct LoopStack {
-    loops: Vec<(i64, i64)>,
-}
-
-impl LoopStack {
-    pub fn new() -> Self {
-        Self { loops: Vec::new() }
-    }
-
-    pub fn push_loop(&mut self, cont: i64, brk: i64) {
-        self.loops.push((cont, brk));
-    }
-
-    pub fn pop_loop(&mut self) {
-        self.loops.pop();
-    }
-
-    pub fn current_loop(&self) -> Option<(i64, i64)> {
-        self.loops.last().cloned()
-    }
-}
-
-/* Error Types */
-
-pub type Span = (usize, usize);
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TypeError {
-    error_type: TypeErrorType,
-    span: Option<Span>,
-}
-
-impl TypeError {
-    pub fn new(error_type: TypeErrorType) -> Self {
-        Self {
-            error_type,
-            span: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum TypeErrorType {
-    TypeMismatchDecl,
-    TypeMismatchAssign,
-    TypeMismatchPrint,
-
-    ConditionNotBool,
-
-    OpNegMismatch,
-    OpTildeMismatch,
-    OpLNotMismatch,
-    OpArithMismatch,
-    OpBitwiseMismatch,
-    OpCompareMismatch,
-    OpLogicalMismatch,
-}
-
-// Syntax Errors
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct SyntaxError {
-    error_type: SyntaxErrorType,
-    span: Option<Span>,
-}
-
-impl SyntaxError {
-    pub fn new(error_type: SyntaxErrorType) -> Self {
-        Self {
-            error_type,
-            span: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum SyntaxErrorType {
-    DuplicateVariable,
-    MissingVariable,
-    JumpOutsideLoop,
 }

@@ -1,0 +1,6 @@
+var a = -12: int;
+var b = 12: int;
+
+def main() : int {
+  var x = -10 : int;
+}

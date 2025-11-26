@@ -1,57 +1,71 @@
 mod ast;
+mod cfg;
 mod lexer;
 mod mm;
-mod synchecker;
+mod optimizer;
+mod options;
+mod semchecker;
 mod tac;
 mod tokens;
 mod typechecker;
 mod types;
 
-#[cfg(test)]
+// #[cfg(test)]
 mod tests;
 
 use crate::{
-    lexer::Lexer, mm::MM, synchecker::SynChecker, tac::TACWrapper, typechecker::TypeChecker,
+    lexer::Lexer, mm::MM, optimizer::Optimizer, options::CompilerOptions, semchecker::SemChecker,
+    typechecker::TypeChecker,
 };
+
 use lalrpop_util::lalrpop_mod;
-use std::{env, fs};
 
 lalrpop_mod!(pub bxgrammar);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = env::args().nth(1).ok_or("Usage: bx-compiler <filename>")?;
-
-    let source_code = std::fs::read_to_string(&filename)?;
-    let lexer = Lexer::new(&source_code);
+    let options = CompilerOptions::from_env();
     let parser = bxgrammar::BXParser::new();
-    let mut program = parser.parse(lexer)?;
 
-    match SynChecker::check(&program) {
-        Some(err) => {
-            for error in err {
-                println!("{:?}", error);
+    for cu in options.compilation_units {
+        let cu_source_code = std::fs::read_to_string(&cu)?;
+        let cu_lexer = Lexer::new(&cu_source_code);
+        let mut cu_program = parser.parse(cu_lexer)?;
+
+        match SemChecker::check(&cu_program) {
+            Some(err) => {
+                for error in err {
+                    println!("{}: {:?}", cu, error);
+                }
+                panic!()
             }
+            None => println!("Semantic Check successful @ {}!", cu),
         }
-        None => println!("All good?"),
-    }
 
-    match TypeChecker::check(&mut program) {
-        Some(err) => {
-            for error in err {
-                println!("{:?}", error);
+        match TypeChecker::check(&mut cu_program) {
+            Some(err) => {
+                for error in err {
+                    println!("{}: {:?}", cu, error);
+                }
+                panic!()
             }
+            None => println!("Type Check successful @ {}!", cu),
         }
-        None => println!("All good!"),
+
+        println!("Munching {}...", cu);
+        let cutac = MM::munch(cu_program);
+        println!("{}", cutac);
+
+        println!("Optimizing {}...", cu);
+        let optimized_cutac = Optimizer::optimize(cutac);
+        println!("{}", optimized_cutac);
+
+        // let proc = (*crate::tests::FIBONACCI).clone();
+        // let fake_cutac = tac::CUTAC(vec![tac::TACDeclaration::ProcDecl(proc)]);
+        // println!("{}", fake_cutac);
+        //
+        // let optimized_cutac = Optimizer::optimize(fake_cutac);
+        // println!("{}", optimized_cutac);
     }
-
-    println!("{:?}", program);
-
-    let tac = MM::munch(&program);
-    let printable_tac = TACWrapper::new(tac);
-
-    let pretty = serde_json::to_string_pretty(&vec![printable_tac])?;
-    // println!("{}", pretty);
-    fs::write("source.tac.json", pretty)?;
 
     Ok(())
 }

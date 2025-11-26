@@ -102,3 +102,7 @@ def main() {
     print(-42);
   }
 }
+
+def print(x: int) {
+
+}

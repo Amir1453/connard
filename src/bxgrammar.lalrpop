@@ -1,5 +1,5 @@
 use crate::tokens::{Token, LexicalError};
-use crate::types::Type;
+use crate::types::{Name, Type};
 use crate::ast;
 
 grammar;
@@ -12,11 +12,11 @@ extern {
 
   enum Token {
     "DEF" => Token::KeywordDef,
-    "MAIN" => Token::KeywordMain,
     "VAR" => Token::KeywordVar,
     "INT" => Token::KeywordInt,
     "BOOL" => Token::KeywordBool,
-    "PRINT" => Token::KeywordPrint,
+    "VOID" => Token::KeywordVoid,
+    "RETURN" => Token::KeywordReturn,
     "IF" => Token::KeywordIf,
     "ELSE" => Token::KeywordElse,
     "WHILE" => Token::KeywordWhile,
@@ -24,8 +24,9 @@ extern {
     "CONTINUE" => Token::KeywordContinue,
     "TRUE" => Token::KeywordTrue,
     "FALSE" => Token::KeywordFalse,
-    "IDENT" => Token::Identifier(<String>),
+    "IDENT" => Token::Identifier(<Name>),
     "NUMBER" => Token::Number(<i64>),
+    "," => Token::Comma,
     "(" => Token::LParen,
     ")" => Token::RParen,
     "{" => Token::LCurlyParen,
@@ -58,7 +59,75 @@ extern {
 
 
 pub BX: ast::Program = {
-  "DEF" "MAIN" "(" ")" "{"  <stmts:Statement*> "}" => ast::Block(stmts)
+  <decls:Declaration*> => ast::Program(decls)
+}
+
+Declaration: ast::Declaration = {
+  <var_decl:VarDeclGlobal> => ast::Declaration::Variable(Box::new(var_decl)),
+
+  "DEF" <proc_name:"IDENT"> "(" <proc_args:ProcArgs?> ")" <return_type:(":" <Type>)?> "{" <stmts:Statement*> "}"  => {
+    ast::Declaration::Proc {
+      proc_name: proc_name.into(),
+      proc_args,
+      return_type,
+      block: Box::new(ast::Block(stmts)),
+    }
+  }
+}
+
+VarDeclGlobal: ast::Variable = {
+  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
+    let (mut names, mut values): (Vec<Name>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+    names.insert(0, name);
+    values.insert(0, value);
+    ast::Variable {names, values, ty, scope: ast::ScopeState::Global}
+  }
+}
+
+ProcArgs: Vec<(Name, Type)> = {
+  <arg:"IDENT"> ":" <ty:Type> <mut arg_type_pair:("," <"IDENT"> ":" <Type>)*> => {
+    arg_type_pair.insert(0, (arg, ty));
+    arg_type_pair
+  }
+}
+
+Type: Type = {
+  "INT" => Type::Int,
+  "BOOL" => Type::Bool, 
+  "VOID" => Type::Void
+}
+
+Statement: ast::Statement = {
+  <var_decl:VarDeclLocal> => ast::Statement::Variable(Box::new(var_decl)),
+
+  <name:"IDENT"> "=" <value:Expression> ";" => {
+    ast::Statement::Assignment { name: name.into(), value }
+  },
+
+  <expr:Expression> ";" => ast::Statement::Eval(expr),
+
+  "RETURN" <expr:Expression?> ";" => ast::Statement::Return(expr),
+
+  "{" <stmts:Statement*> "}" => ast::Statement::Block(Box::new(ast::Block(stmts))),
+
+  <ifelse:IFElse> => ifelse,
+
+  "WHILE" "(" <condition:Expression> ")" "{" <stmts:Statement*> "}" => {
+    ast::Statement::While { condition, block: Box::new(ast::Block(stmts)) }
+  },
+
+  "BREAK" ";"=> ast::Statement::Jump(ast::JumpState::Break),
+
+  "CONTINUE" ";" => ast::Statement::Jump(ast::JumpState::Continue),
+}
+
+VarDeclLocal: ast::Variable = {
+  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
+    let (mut names, mut values): (Vec<Name>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+    names.insert(0, name);
+    values.insert(0, value);
+    ast::Variable {names, values, ty, scope: ast::ScopeState::Local}
+  }
 }
 
 IFElse: ast::Statement = {
@@ -83,39 +152,10 @@ IFRest: Option<Box<ast::Statement>> = {
     => None,
 };
 
-Statement: ast::Statement = {
-  "VAR" <name:"IDENT"> "=" <value:Expression> ":" "INT" ";" => {
-    ast::Statement::Variable { name, value, ty: Type::Int }
-  },
-
-  "VAR" <name:"IDENT"> "=" <value:Expression> ":" "BOOL" ";" => {
-    ast::Statement::Variable { name, value, ty: Type::Bool }
-  },
-
-  <name:"IDENT"> "=" <value:Expression> ";" => {
-    ast::Statement::Assignment { name, value }
-  },
-
-  "PRINT" "(" <value:Expression> ")" ";" => {
-    ast::Statement::Print { value }
-  },
-
-  "{" <stmts:Statement*> "}" => ast::Statement::Block(Box::new(ast::Block(stmts))),
-
-  <ifelse:IFElse> => ifelse,
-
-  "WHILE" "(" <condition:Expression> ")" "{" <stmts:Statement*> "}" => {
-    ast::Statement::While { condition, block: Box::new(ast::Block(stmts)) }
-  },
-
-  "BREAK" ";"=> ast::Statement::Jump(ast::JumpState::Break),
-
-  "CONTINUE" ";" => ast::Statement::Jump(ast::JumpState::Continue),
-}
-
 Expression: Box<ast::Expression> = {
   #[precedence(level="1")]
   Term,
+  ProcCall,
 
   #[precedence(level="10")] #[assoc(side="right")]
   "~" <value:Expression> => {
@@ -322,7 +362,7 @@ Term: Box<ast::Expression> = {
   },
 
   <name:"IDENT"> => {
-    Box::new(ast::Expression::Variable(name))
+    Box::new(ast::Expression::Variable(name.into(), None))
   },
 
   "TRUE" => {
@@ -334,4 +374,15 @@ Term: Box<ast::Expression> = {
   },
 
   "(" <Expression> ")",
+}
+
+ProcCall: Box<ast::Expression> = {
+  <proc_name:"IDENT"> "(" <proc_args:ProcCallArgs?> ")" => Box::new(ast::Expression::ProcCall {proc_name: proc_name.into(), proc_args, ty: None}),
+}
+
+ProcCallArgs: Vec<Box<ast::Expression>> = {
+  <arg:Expression> <mut args:("," <Expression>)*> => {
+    args.insert(0, arg);
+    args
+  }
 }

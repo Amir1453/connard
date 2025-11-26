@@ -3,3 +3,8 @@ Notes.md
 a.out
 source.s 
 source.tac.json
+
+output.svg
+output.txt
+test.dot
+/vendor
