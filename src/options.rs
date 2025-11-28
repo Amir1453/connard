@@ -1,12 +1,11 @@
 use std::{collections::HashMap, env, sync::LazyLock};
 
-#[derive(Hash, Clone, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum MetaOptions {
     CompilationThreads(u8),
 }
 
-#[derive(Hash, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 pub enum WarningOptions {
     W,
     All,
@@ -24,7 +23,7 @@ const WARNINGS: LazyLock<HashMap<&'static str, WarningOptions>> = LazyLock::new(
     ])
 });
 
-#[derive(Hash, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 pub enum CFGInstrumentationOptions {
     Nonce,
     All,
@@ -44,7 +43,6 @@ const INST: LazyLock<HashMap<&'static str, CFGInstrumentationOptions>> = LazyLoc
     ])
 });
 
-#[derive(Debug, Clone)]
 pub struct CompilerOptions {
     pub compilation_units: Vec<String>,
     #[allow(dead_code)]
@@ -65,13 +63,13 @@ impl CompilerOptions {
                 continue;
             }
 
-            if let Some(opt) = WARNINGS.get(i.as_str()) {
-                warning_options.push(opt.clone());
+            if let Some(&opt) = WARNINGS.get(i.as_str()) {
+                warning_options.push(opt);
                 continue;
             }
 
-            if let Some(opt) = INST.get(i.as_str()) {
-                cfg_instrumentation_options.push(opt.clone());
+            if let Some(&opt) = INST.get(i.as_str()) {
+                cfg_instrumentation_options.push(opt);
                 continue;
             }
 

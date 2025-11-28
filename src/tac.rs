@@ -10,29 +10,25 @@ use crate::{
 // use serde::{Serialize, Serializer};
 // use std::{collections::HashMap, sync::LazyLock};
 
-#[derive(Clone, PartialEq)]
 pub struct CUTAC(pub Vec<TACDeclaration>);
 
-#[derive(Clone, PartialEq)]
 pub enum TACDeclaration {
     GlobalVarDecl(GlobalVarDecl),
     ProcDecl(ProcDecl),
 }
 
-#[derive(Clone, PartialEq)]
 pub struct GlobalVarDecl {
     pub name: Name,
     pub value: i64,
 }
 
-#[derive(Clone, PartialEq)]
 pub struct ProcDecl {
     pub name: Name,
     arguments: Option<Vec<Name>>,
     pub instructions: InstBlock,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACInst {
     Const {
         destination: TACTemp,
@@ -83,7 +79,7 @@ pub enum TACInst {
     Nop,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACTemp {
     Temp(i64),
     NamedTemp(Name),
@@ -96,7 +92,7 @@ pub enum Label {
     Named(Name),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACJumpOpcode {
     JZ,
     JNZ,
@@ -106,13 +102,13 @@ pub enum TACJumpOpcode {
     JNLE,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACUnaryOpcode {
     NEG,
     NOT,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACBinaryOpcode {
     ADD,
     SUB,
@@ -387,125 +383,3 @@ impl fmt::Display for TACBinaryOpcode {
         write!(f, "{}", s)
     }
 }
-
-// #[derive(Hash, Clone, Debug, PartialEq, Eq)]
-// pub enum TACOpcode {
-//     COPY,
-//     CONST,
-//     LABEL,
-//     PARAM,
-//     CALL,
-//     RET,
-//
-//     ADD,
-//     SUB,
-//     MUL,
-//     DIV,
-//     MOD,
-//     NEG,
-//
-//     OR,
-//     XOR,
-//     AND,
-//     NOT,
-//     SHL,
-//     SHR,
-//
-//     JMP,
-//     JZ,
-//     JNZ,
-//     JL,
-//     JNL,
-//     JLE,
-//     JNLE,
-//
-//     ERROR,
-// }
-//
-// const OPCODES: LazyLock<HashMap<TACOpcode, &'static str>> = LazyLock::new(|| {
-//     use TACOpcode::*;
-//     HashMap::from([
-//         (COPY, "copy"),
-//         (CONST, "const"),
-//         (LABEL, "label"),
-//         (ADD, "add"),
-//         (SUB, "sub"),
-//         (MUL, "mul"),
-//         (DIV, "div"),
-//         (MOD, "mod"),
-//         (NEG, "neg"),
-//         (OR, "or"),
-//         (XOR, "xor"),
-//         (AND, "and"),
-//         (NOT, "not"),
-//         (SHL, "shl"),
-//         (SHR, "shr"),
-//         (JMP, "jmp"),
-//         (JZ, "jz"),
-//         (JNZ, "jnz"),
-//         (JL, "jl"),
-//         (JNL, "jnl"),
-//         (JLE, "jle"),
-//         (JNLE, "jnle"),
-//         (ERROR, "error"),
-//     ])
-// });
-//
-// impl Into<TACOpcode> for Operator {
-//     fn into(self) -> TACOpcode {
-//         use Operator::*;
-//         use TACOpcode::*;
-//         match self {
-//             Plus => ADD,
-//             Minus => SUB,
-//             Star => MUL,
-//             Slash => DIV,
-//             Mod => MOD,
-//             Neg => NEG,
-//             Pipe => OR,
-//             Caret => XOR,
-//             Ampersand => AND,
-//             Tilde => NOT,
-//             LShift => SHL,
-//             RShift => SHR,
-//             _ => ERROR,
-//         }
-//     }
-// }
-
-// impl Serialize for TACArgs {
-//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//     {
-//         match self {
-//             TACArgs::Temporaries((v, u)) => vec![v, u].serialize(s),
-//             TACArgs::Temporary(v) => vec![v].serialize(s),
-//             TACArgs::TempAndLabel((v, u)) => {
-//                 vec![format!("%{}", v.0), format!("%.L{}", u)].serialize(s)
-//             }
-//             TACArgs::Number(n) => vec![n].serialize(s),
-//             TACArgs::Label(l) => vec![format!("%.L{}", l)].serialize(s),
-//         }
-//     }
-// }
-
-// impl Serialize for Temp {
-//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//     {
-//         let key = format!("%{}", self.0);
-//         key.serialize(s)
-//     }
-// }
-//
-// impl Serialize for TACOpcode {
-//     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//     {
-//         let key = OPCODES[&self];
-//         key.serialize(s)
-//     }
-// }

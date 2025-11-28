@@ -6,7 +6,6 @@ use compact_str::CompactString;
 use crate::ast::*;
 use crate::types::{Name, Span, Stack};
 
-#[derive(PartialEq)]
 pub struct SemChecker {
     scopes: Stack<HashSet<CompactString>>,
     errors: Vec<SyntaxError>,

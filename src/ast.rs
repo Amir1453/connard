@@ -1,9 +1,7 @@
 use crate::types::{Name, Promise, Type};
 
-#[derive(PartialEq)]
 pub struct Program(pub Vec<Declaration>);
 
-#[derive(Clone, PartialEq)]
 pub enum Declaration {
     Variable(Box<Variable>),
 
@@ -15,7 +13,6 @@ pub enum Declaration {
     },
 }
 
-#[derive(Clone, PartialEq)]
 pub struct Variable {
     pub names: Vec<Name>,
     pub values: Vec<Box<Expression>>,
@@ -23,10 +20,8 @@ pub struct Variable {
     pub scope: ScopeState,
 }
 
-#[derive(Clone, PartialEq)]
 pub struct Block(pub Vec<Statement>);
 
-#[derive(Clone, PartialEq)]
 pub enum Statement {
     Variable(Box<Variable>),
 
@@ -55,7 +50,6 @@ pub enum Statement {
     Jump(JumpState),
 }
 
-#[derive(Clone, PartialEq)]
 pub enum Expression {
     Variable(Name, Promise<Type>),
     Number(i64),
@@ -94,7 +88,6 @@ impl Expression {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
 pub enum Operator {
     Plus,
     Minus,
@@ -121,13 +114,11 @@ pub enum Operator {
     LNot,
 }
 
-#[derive(Clone, PartialEq)]
 pub enum ScopeState {
     Global,
     Local,
 }
 
-#[derive(Clone, PartialEq)]
 pub enum JumpState {
     Break,
     Continue,

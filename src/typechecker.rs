@@ -4,7 +4,7 @@ use std::iter::zip;
 use crate::ast::*;
 use crate::types::{Name, ProcType, Span, Stack, Type};
 
-#[derive(Clone, PartialEq)]
+// #[derive(Clone, PartialEq)]
 pub struct TypeChecker {
     scopes: Stack<HashMap<Name, SemanticType>>,
     current_proc_name: Name,
@@ -349,7 +349,6 @@ impl TypeChecker {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
 pub enum SemanticType {
     SimpleType(Type),
     ProcType(ProcType),
