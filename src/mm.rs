@@ -7,10 +7,12 @@ use crate::types::Type;
 use std::collections::HashMap;
 
 pub struct MM {
-    vars: Stack<HashMap<Name, TACTemp>>,
     cutac: CUTAC,
     proc_instructions: InstBlock,
+
+    vars: Stack<HashMap<Name, TACTemp>>,
     loop_stack: Stack<(Label, Label)>,
+
     temp_counter: i64,
     label_counter: i64,
 }
@@ -18,9 +20,9 @@ pub struct MM {
 impl MM {
     fn new() -> Self {
         Self {
-            vars: Stack::new_with(HashMap::new()),
             cutac: CUTAC::new(),
             proc_instructions: Vec::new(),
+            vars: Stack::new_with(HashMap::new()),
             loop_stack: Stack::default(),
             temp_counter: -1,
             label_counter: -1,
@@ -34,6 +36,8 @@ impl MM {
     }
 
     fn munch_program(&mut self, program: Program) {
+        use TACInst::*;
+
         for decl in program.0 {
             match decl {
                 Declaration::Variable(var) => {
@@ -43,7 +47,7 @@ impl MM {
                 Declaration::Proc {
                     proc_name,
                     proc_args,
-                    return_type: _,
+                    return_type,
                     block,
                 } => {
                     self.vars.push(HashMap::new());
@@ -56,7 +60,47 @@ impl MM {
                     });
 
                     self.munch_block(*block);
-                    let instructions = std::mem::take(&mut self.proc_instructions);
+                    let mut instructions = std::mem::take(&mut self.proc_instructions);
+
+                    let ret_label = Label::Named("Ret".into());
+
+                    if let Some(_) = return_type {
+                        let ret_temp = self.fresh_temp();
+                        let mut copy_inst: Vec<(usize, TACInst)> =
+                            Vec::with_capacity(instructions.len() / 4);
+
+                        for (i, inst) in instructions.iter().enumerate() {
+                            match inst {
+                                Return(Some(tmp)) => {
+                                    let copy = Copi {
+                                        destination: ret_temp.clone(),
+                                        source: tmp.clone(),
+                                    };
+                                    copy_inst.push((i, copy));
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        copy_inst.into_iter().rev().for_each(|(pos, inst)| {
+                            instructions.insert(pos, inst);
+                            instructions[pos + 1] = UnconditionalJump(ret_label.clone());
+                        });
+
+                        instructions.push(LabelDecl(ret_label));
+                        instructions.push(Return(Some(ret_temp.clone())));
+                    } else {
+                        for inst in instructions.iter_mut() {
+                            match inst {
+                                Return(None) => *inst = UnconditionalJump(ret_label.clone()),
+                                _ => {}
+                            }
+                        }
+
+                        instructions.push(LabelDecl(ret_label));
+                        instructions.push(Return(None));
+                    }
+
                     let proc_decl = ProcDecl::new(proc_name, arguments, instructions);
                     self.cutac.push(TACDeclaration::ProcDecl(proc_decl));
 
@@ -178,7 +222,7 @@ impl MM {
         use TACInst::Copi;
 
         for (name, value_expr) in var.names.into_iter().zip(var.values.into_iter()) {
-            let fresh = TACTemp::Temp(self.fresh_temp());
+            let fresh = self.fresh_temp();
             self.current_vars_insert(name, fresh.clone());
 
             let temp = self.munch_expression(*value_expr);
@@ -193,7 +237,7 @@ impl MM {
         use TACInst::*;
 
         if expr.get_type() == Type::Bool {
-            let temp = TACTemp::Temp(self.fresh_temp());
+            let temp = self.fresh_temp();
             let tlabel = self.fresh_label();
             let flabel = self.fresh_label();
 
@@ -217,7 +261,7 @@ impl MM {
                 Expression::Variable(name, ..) => self.current_var_get(&name),
 
                 Expression::Number(num) => {
-                    let temp = TACTemp::Temp(self.fresh_temp());
+                    let temp = self.fresh_temp();
                     self.emit(Const {
                         destination: temp.clone(),
                         constant: num,
@@ -231,7 +275,7 @@ impl MM {
                     rhs,
                     ty: _,
                 } => {
-                    let temp = TACTemp::Temp(self.fresh_temp());
+                    let temp = self.fresh_temp();
                     let ltmp = self.munch_expression(*lhs);
                     let rtmp = self.munch_expression(*rhs);
 
@@ -250,7 +294,7 @@ impl MM {
                     value,
                     ty: _,
                 } => {
-                    let temp = TACTemp::Temp(self.fresh_temp());
+                    let temp = self.fresh_temp();
                     let utmp = self.munch_expression(*value);
 
                     self.emit(UnaryOperation {
@@ -277,7 +321,7 @@ impl MM {
                         });
                     }
 
-                    let result = TACTemp::Temp(self.fresh_temp());
+                    let result = self.fresh_temp();
                     self.emit(ProcCall {
                         proc_name,
                         arg_count,
@@ -324,7 +368,7 @@ impl MM {
                     Equal | NEqual | L | LTE | G | GTE => {
                         let ltmp = self.munch_expression(*lhs);
                         let rtmp = self.munch_expression(*rhs);
-                        let temp = TACTemp::Temp(self.fresh_temp());
+                        let temp = self.fresh_temp();
 
                         self.emit(BinaryOperation {
                             opcode: SUB,
@@ -388,7 +432,7 @@ impl MM {
                     });
                 }
 
-                let result = TACTemp::Temp(self.fresh_temp());
+                let result = self.fresh_temp();
                 self.emit(ProcCall {
                     proc_name,
                     arg_count,
@@ -407,9 +451,9 @@ impl MM {
         }
     }
 
-    fn fresh_temp(&mut self) -> i64 {
+    fn fresh_temp(&mut self) -> TACTemp {
         self.temp_counter += 1;
-        self.temp_counter
+        TACTemp::Temp(self.temp_counter)
     }
 
     fn fresh_label(&mut self) -> Label {
