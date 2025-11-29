@@ -408,12 +408,6 @@ impl BasicBlock {
     }
 }
 
-impl Debug for BasicBlock {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
 impl fmt::Display for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", &self.block_label)?;
@@ -421,5 +415,11 @@ impl fmt::Display for BasicBlock {
             writeln!(f, "{}", inst)?;
         }
         write!(f, "")
+    }
+}
+
+impl Debug for BasicBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
