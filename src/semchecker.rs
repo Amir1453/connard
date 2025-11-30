@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 use std::iter::zip;
 
-use compact_str::CompactString;
-
 use crate::ast::*;
 use crate::types::{Name, Span, Stack};
 
 pub struct SemChecker {
-    scopes: Stack<HashSet<CompactString>>,
+    scopes: Stack<HashSet<Name>>,
     errors: Vec<SyntaxError>,
     loop_depth: usize,
 }
@@ -15,14 +13,15 @@ pub struct SemChecker {
 impl SemChecker {
     fn new() -> Self {
         Self {
-            scopes: Stack::new_with(HashSet::new()),
+            scopes: Stack::new(),
             errors: Vec::new(),
             loop_depth: 0,
         }
     }
 
-    pub fn check(program: &Program) -> Option<Vec<SyntaxError>> {
+    pub fn check(program: &Program, global_decls: HashSet<Name>) -> Option<Vec<SyntaxError>> {
         let mut sc = SemChecker::new();
+        sc.scopes.push(global_decls);
         sc.check_program(program);
         match sc.errors.is_empty() {
             true => None,
@@ -33,21 +32,9 @@ impl SemChecker {
     fn check_program(&mut self, program: &Program) {
         for decl in &program.0 {
             match decl {
-                Declaration::Proc { proc_name, .. } => {
-                    self.check_non_declared(proc_name);
-                }
-
                 Declaration::Variable(var) => self.check_global_variable(var),
-            }
-        }
 
-        for decl in &program.0 {
-            match decl {
-                Declaration::Proc { block, .. } => {
-                    self.check_block(block);
-                }
-
-                Declaration::Variable(_) => {}
+                Declaration::Proc { block, .. } => self.check_block(block),
             }
         }
     }
@@ -61,9 +48,8 @@ impl SemChecker {
     }
 
     fn check_global_variable(&mut self, var: &Variable) {
-        for (name, expr) in zip(&var.names, &var.values) {
+        for expr in &var.values {
             self.check_is_constant_expression(expr);
-            self.check_non_declared(name);
         }
     }
 

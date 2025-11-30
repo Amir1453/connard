@@ -45,6 +45,10 @@ pub struct Stack<T> {
 }
 
 impl<T> Stack<T> {
+    pub fn new() -> Self {
+        Self { stack: Vec::new() }
+    }
+
     pub fn new_with(t: T) -> Self {
         Self { stack: vec![t] }
     }

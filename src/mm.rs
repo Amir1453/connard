@@ -30,12 +30,11 @@ impl MM {
     }
 
     pub fn munch(program: Program) -> CUTAC {
-        let mut mm = MM::new();
-        mm.munch_program(program);
-        mm.cutac
+        let mm = MM::new();
+        mm.munch_program(program)
     }
 
-    fn munch_program(&mut self, program: Program) {
+    fn munch_program(mut self, program: Program) -> CUTAC {
         use TACInst::*;
 
         for decl in program.0 {
@@ -108,6 +107,7 @@ impl MM {
                 }
             }
         }
+        self.cutac
     }
 
     fn munch_global_variable(&mut self, var: Variable) {

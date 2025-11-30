@@ -14,14 +14,18 @@ pub struct TypeChecker {
 impl TypeChecker {
     fn new() -> Self {
         Self {
-            scopes: Stack::new_with(HashMap::new()),
+            scopes: Stack::new(),
             current_proc_name: Name::with_capacity(50),
             errors: Vec::new(),
         }
     }
 
-    pub fn check(program: &mut Program) -> Option<Vec<TypeError>> {
+    pub fn check(
+        program: &mut Program,
+        global_decls: HashMap<Name, SemanticType>,
+    ) -> Option<Vec<TypeError>> {
         let mut tc = TypeChecker::new();
+        tc.scopes.push(global_decls);
         tc.check_program(program);
         match tc.errors.is_empty() {
             true => None,
@@ -33,25 +37,6 @@ impl TypeChecker {
         for decl in &mut program.0 {
             match decl {
                 Declaration::Proc {
-                    proc_name,
-                    proc_args,
-                    return_type,
-                    ..
-                } => {
-                    self.current_scope_insert_proc(
-                        proc_name.clone(),
-                        proc_args.clone(),
-                        return_type.clone(),
-                    );
-                }
-
-                Declaration::Variable(var) => self.check_global_variable(var),
-            }
-        }
-
-        for decl in &mut program.0 {
-            match decl {
-                Declaration::Proc {
                     proc_name, block, ..
                 } => {
                     self.current_proc_name = proc_name.clone();
@@ -59,20 +44,20 @@ impl TypeChecker {
                     self.current_proc_name.clear();
                 }
 
-                _ => {}
+                Declaration::Variable(var) => self.check_global_variable(var),
             }
         }
     }
 
     fn check_global_variable(&mut self, var: &mut Variable) {
         let var_type = var.ty;
-        for (name, expr) in zip(&var.names, &mut var.values) {
+        for (_, expr) in zip(&var.names, &mut var.values) {
             let value_type = expr.get_type();
             if value_type != var_type {
                 self.insert_error(TypeErrorType::TypeMismatchGlobalDecl, None);
             }
 
-            self.current_scope_insert_simple(name.clone(), value_type);
+            // self.current_scope_insert_simple(name.clone(), value_type);
         }
     }
 
@@ -303,6 +288,7 @@ impl TypeChecker {
         }
     }
 
+    #[allow(dead_code)]
     pub fn current_scope_insert_proc(
         &mut self,
         name: Name,
@@ -349,6 +335,7 @@ impl TypeChecker {
     }
 }
 
+#[derive(Clone)]
 pub enum SemanticType {
     SimpleType(Type),
     ProcType(ProcType),
