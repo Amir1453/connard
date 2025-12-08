@@ -1,0 +1,9 @@
+// empty function body
+extern def print(n : int);
+
+def test() : int {
+}
+
+def main() {
+  print(test());
+}

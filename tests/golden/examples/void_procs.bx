@@ -1,0 +1,20 @@
+extern def print(n : int);
+
+// Test void procedures (no return value)
+def print_sum(a, b : int) {
+  var result = a + b : int;
+  print(result);
+}
+
+def print_range(start, end : int) {
+  while (start <= end) {
+    print(start);
+    start = start + 1;
+  }
+}
+
+def main() {
+  print_sum(10, 20);
+  print_sum(5, 15);
+  print_range(1, 5);
+}

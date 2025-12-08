@@ -1,0 +1,45 @@
+// Test counter with reset functionality across functions
+extern def print(n : int);
+
+var count = 0 : int;
+var max_count = 5 : int;
+
+def increment() {
+  count = count + 1;
+}
+
+def check_and_reset() {
+  if (count >= max_count) {
+    count = 0;
+  }
+}
+
+def increment_with_check() {
+  increment();
+  check_and_reset();
+}
+
+def main() {
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+  
+  increment_with_check();
+  print(count);
+}

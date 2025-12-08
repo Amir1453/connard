@@ -1,0 +1,41 @@
+// Test function with 10 parameters to verify stack argument order
+// Parameters 1-6 go in registers (rdi, rsi, rdx, rcx, r8, r9)
+// Parameters 7-10 should be pushed onto stack in correct order
+extern def print(n : int);
+
+def check_param_order(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 : int) : int {
+  // Print each parameter to verify order
+  print(p1);
+  print(p2);
+  print(p3);
+  print(p4);
+  print(p5);
+  print(p6);
+  print(p7);
+  print(p8);
+  print(p9);
+  print(p10);
+  
+  // Return a computation using all parameters
+  return p7 + p8 + p9 + p10;
+}
+
+def test_stack_args(a, b, c, d, e, f, g : int) : int {
+  // Test with 7 parameters (only g is on stack)
+  print(a);
+  print(b);
+  print(c);
+  print(d);
+  print(e);
+  print(f);
+  print(g);
+  return g;
+}
+
+def main() {
+  var result = check_param_order(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000) : int;
+  print(result);
+  
+  var result2 = test_stack_args(10, 20, 30, 40, 50, 60, 70) : int;
+  print(result2);
+}

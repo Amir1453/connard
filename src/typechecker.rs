@@ -311,7 +311,7 @@ impl TypeChecker {
             if let Some(t) = s.get(name)
                 && let SemanticType::SimpleType(ty) = t
             {
-                return ty.clone();
+                return *ty;
             }
         }
         Type::Error

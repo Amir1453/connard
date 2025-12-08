@@ -1,0 +1,25 @@
+// Test complex arithmetic expressions
+extern def print(n : int);
+
+def evaluate_complex(a, b, c : int) : int {
+  var result = (a + b) * c - (a - b) / 2 : int;
+  return result;
+}
+
+def nested_arithmetic(x : int) : int {
+  return ((x + 3) * 2 - 5) / (x - 1);
+}
+
+def main() {
+  print(evaluate_complex(10, 6, 3));
+  print(evaluate_complex(20, 10, 2));
+  print(nested_arithmetic(5));
+  print(nested_arithmetic(10));
+  
+  var a = 7 : int;
+  var b = 3 : int;
+  var result = a * b + a / b - a % b : int;
+  print(result);
+  
+  print((15 + 5) * 2 - 10 / 2);
+}

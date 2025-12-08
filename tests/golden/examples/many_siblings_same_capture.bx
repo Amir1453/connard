@@ -1,0 +1,19 @@
+extern def print(n : int);
+
+def main() {
+    var acc = 0 : int;
+    
+    def add1() { acc = acc + 1; }
+    def add2() { acc = acc + 2; }
+    def add3() { acc = acc + 3; }
+    def add4() { acc = acc + 4; }
+    def add5() { acc = acc + 5; }
+    
+    add1();
+    add2();
+    add3();
+    add4();
+    add5();
+    
+    print(acc);
+}

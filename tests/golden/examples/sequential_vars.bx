@@ -1,0 +1,22 @@
+// Test array-like behavior with sequential variables
+extern def print(n : int);
+
+def main() {
+  var a0 = 1 : int;
+  var a1 = 2 : int;
+  var a2 = 3 : int;
+  var a3 = 4 : int;
+  var a4 = 5 : int;
+  
+  var sum = a0 + a1 + a2 + a3 + a4 : int;
+  print(sum);
+  
+  a0 = a0 * 2;
+  a1 = a1 * 2;
+  a2 = a2 * 2;
+  a3 = a3 * 2;
+  a4 = a4 * 2;
+  
+  sum = a0 + a1 + a2 + a3 + a4;
+  print(sum);
+}

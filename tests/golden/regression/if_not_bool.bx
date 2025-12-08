@@ -1,0 +1,8 @@
+extern def print(n : int);
+
+// if condition must be bool
+def main() {
+  if (42) {
+    print(1);
+  }
+}

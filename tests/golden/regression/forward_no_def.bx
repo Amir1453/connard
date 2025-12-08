@@ -1,0 +1,8 @@
+// forward declaration without definition
+extern def print(n : int);
+
+def helper(x : int) : int;
+
+def main() {
+  print(helper(5));
+}

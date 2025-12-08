@@ -28,7 +28,7 @@ pub struct ProcDecl {
     pub instructions: InstBlock,
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Clone, Hash, PartialEq, Default)]
 pub enum TACInst {
     Const {
         destination: TACTemp,
@@ -76,6 +76,7 @@ pub enum TACInst {
 
     Return(Option<TACTemp>),
 
+    #[default]
     Nop,
 }
 
@@ -201,12 +202,6 @@ impl fmt::Display for ProcDecl {
         }
 
         write!(f, "")
-    }
-}
-
-impl Default for TACInst {
-    fn default() -> Self {
-        Self::Nop
     }
 }
 

@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// duplicate parameter names
+def test(x, x : int) : int {
+  return x;
+}
+
+def main() {
+  print(test(5, 10));
+}

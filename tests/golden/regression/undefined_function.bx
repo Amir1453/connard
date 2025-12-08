@@ -1,0 +1,6 @@
+extern def print(n : int);
+
+// calling undefined function
+def main() {
+  print(undefined_func(5));
+}

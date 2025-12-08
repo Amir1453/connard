@@ -1,0 +1,16 @@
+// Test complex bitwise expressions
+extern def print(n : int);
+
+def main() {
+  var a = 12 : int;
+  var b = 25 : int;
+  
+  print(a & b);
+  print(a | b);
+  print(a ^ b);
+  print((a & b) | (a ^ b));
+  print((a | b) & (a ^ b));
+  print(~a & b);
+  print(a << 1);
+  print(b >> 2);
+}

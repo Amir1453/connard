@@ -1,0 +1,14 @@
+extern def print(n : int);
+
+def main() {
+    def func1() {
+        print(1);
+    }
+    
+    // Redeclare in same scope - should fail
+    def func1() {
+        print(2);
+    }
+    
+    func1();
+}

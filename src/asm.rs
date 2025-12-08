@@ -52,9 +52,9 @@ impl Asm {
 
     fn lower_global_var_decl(&mut self, var: GlobalVarDecl) {
         self.emit_var(".data");
-        self.emit_var(&format!(".globl {}", var.name));
-        self.emit_var(&format!("{}:", var.name));
-        self.emit_var(&format!(".quad {}", var.value));
+        self.emit_var(format!(".globl {}", var.name));
+        self.emit_var(format!("{}:", var.name));
+        self.emit_var(format!(".quad {}", var.value));
     }
 
     fn lower_proc_decl(&mut self, proc: ProcDecl) {
@@ -129,7 +129,7 @@ impl Asm {
                 constant,
             } => {
                 let dst = self.temp_for(destination);
-                self.emit(&format!("\tmovq\t${}, {}", constant, dst));
+                self.emit(format!("\tmovq\t${}, {}", constant, dst));
             }
 
             TACInst::Copi {
@@ -138,16 +138,16 @@ impl Asm {
             } => {
                 let dst = self.temp_for(destination);
                 let src = self.temp_for(source);
-                self.emit(&format!("\tmovq\t{}, %r11", src));
-                self.emit(&format!("\tmovq\t%r11, {}", dst));
+                self.emit(format!("\tmovq\t{}, %r11", src));
+                self.emit(format!("\tmovq\t%r11, {}", dst));
             }
 
             TACInst::LabelDecl(lbl) => {
-                self.emit(&format!("{}:", self.format_label(&lbl)));
+                self.emit(format!("{}:", self.format_label(&lbl)));
             }
 
             TACInst::UnconditionalJump(lbl) => {
-                self.emit(&format!("\tjmp\t{}", self.format_label(&lbl)));
+                self.emit(format!("\tjmp\t{}", self.format_label(&lbl)));
             }
 
             TACInst::ConditionalJump {
@@ -156,7 +156,7 @@ impl Asm {
                 destination,
             } => {
                 let cond = self.temp_for(condition);
-                self.emit(&format!("\tcmpq\t$0, {}", cond));
+                self.emit(format!("\tcmpq\t$0, {}", cond));
                 let j = match opcode {
                     TACJumpOpcode::JZ => "jz",
                     TACJumpOpcode::JNZ => "jnz",
@@ -165,7 +165,7 @@ impl Asm {
                     TACJumpOpcode::JLE => "jle",
                     TACJumpOpcode::JNLE => "jg",
                 };
-                self.emit(&format!("\t{}\t{}", j, self.format_label(&destination)));
+                self.emit(format!("\t{}\t{}", j, self.format_label(&destination)));
             }
 
             TACInst::UnaryOperation {
@@ -177,14 +177,14 @@ impl Asm {
                 let dst = self.temp_for(result);
                 match opcode {
                     TACUnaryOpcode::NEG => {
-                        self.emit(&format!("\tmovq\t{}, %r11", opnd));
+                        self.emit(format!("\tmovq\t{}, %r11", opnd));
                         self.emit("\tnegq\t%r11");
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACUnaryOpcode::NOT => {
-                        self.emit(&format!("\tmovq\t{}, %r11", opnd));
+                        self.emit(format!("\tmovq\t{}, %r11", opnd));
                         self.emit("\tnotq\t%r11");
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                 }
             }
@@ -200,58 +200,58 @@ impl Asm {
                 let dst = self.temp_for(result);
                 match opcode {
                     TACBinaryOpcode::ADD => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\taddq\t{}, %r11", r));
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\taddq\t{}, %r11", r));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::SUB => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\tsubq\t{}, %r11", r));
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\tsubq\t{}, %r11", r));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::MUL => {
-                        self.emit(&format!("\tmovq\t{}, %rax", l));
-                        self.emit(&format!("\timulq\t{}", r));
-                        self.emit(&format!("\tmovq\t%rax, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %rax", l));
+                        self.emit(format!("\timulq\t{}", r));
+                        self.emit(format!("\tmovq\t%rax, {}", dst));
                     }
                     TACBinaryOpcode::DIV => {
-                        self.emit(&format!("\tmovq\t{}, %rax", l));
+                        self.emit(format!("\tmovq\t{}, %rax", l));
                         self.emit("\tcqto");
-                        self.emit(&format!("\tidivq\t{}", r));
-                        self.emit(&format!("\tmovq\t%rax, {}", dst));
+                        self.emit(format!("\tidivq\t{}", r));
+                        self.emit(format!("\tmovq\t%rax, {}", dst));
                     }
                     TACBinaryOpcode::MOD => {
-                        self.emit(&format!("\tmovq\t{}, %rax", l));
+                        self.emit(format!("\tmovq\t{}, %rax", l));
                         self.emit("\tcqto");
-                        self.emit(&format!("\tidivq\t{}", r));
-                        self.emit(&format!("\tmovq\t%rdx, {}", dst));
+                        self.emit(format!("\tidivq\t{}", r));
+                        self.emit(format!("\tmovq\t%rdx, {}", dst));
                     }
                     TACBinaryOpcode::AND => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\tandq\t{}, %r11", r));
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\tandq\t{}, %r11", r));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::OR => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\torq\t{}, %r11", r));
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\torq\t{}, %r11", r));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::XOR => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\txorq\t{}, %r11", r));
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\txorq\t{}, %r11", r));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::SHL => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\tmovq\t{}, %rcx", r));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\tmovq\t{}, %rcx", r));
                         self.emit("\tsalq\t%cl, %r11");
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                     TACBinaryOpcode::SHR => {
-                        self.emit(&format!("\tmovq\t{}, %r11", l));
-                        self.emit(&format!("\tmovq\t{}, %rcx", r));
+                        self.emit(format!("\tmovq\t{}, %r11", l));
+                        self.emit(format!("\tmovq\t{}, %rcx", r));
                         self.emit("\tsarq\t%cl, %r11");
-                        self.emit(&format!("\tmovq\t%r11, {}", dst));
+                        self.emit(format!("\tmovq\t%r11, {}", dst));
                     }
                 }
             }
@@ -276,7 +276,7 @@ impl Asm {
                 for i in 0..self.params.len().min(6) {
                     let a = self.params[i].clone();
                     let src = self.temp_for(a);
-                    self.emit(&format!("\tmovq\t{}, {}", src, param_regs[i]));
+                    self.emit(format!("\tmovq\t{}, {}", src, param_regs[i]));
                 }
 
                 // rest pushed (reverse)
@@ -284,25 +284,25 @@ impl Asm {
                     for idx in (6..self.params.len()).rev() {
                         let a = self.params[idx].clone();
                         let src = self.temp_for(a);
-                        self.emit(&format!("\tpushq\t{}", src));
+                        self.emit(format!("\tpushq\t{}", src));
                     }
                 }
 
-                let qarg = if arg_count <= 6 { 0 } else { arg_count - 6 };
+                let qarg = arg_count.saturating_sub(6);
                 if qarg & 0x1 == 1 {
                     self.emit("\tsubq\t$8, %rsp");
                 }
 
-                self.emit(&format!("\tcallq\t{}", proc_name));
+                self.emit(format!("\tcallq\t{}", proc_name));
 
                 if qarg > 0 {
                     let restore = qarg + (qarg & 0x1);
-                    self.emit(&format!("\taddq\t${}, %rsp", restore * 8));
+                    self.emit(format!("\taddq\t${}, %rsp", restore * 8));
                 }
 
                 // result is a TACTemp (per your TAC)
                 let dst = self.temp_for(result);
-                self.emit(&format!("\tmovq\t%rax, {}", dst));
+                self.emit(format!("\tmovq\t%rax, {}", dst));
 
                 self.params.clear();
             }
@@ -310,7 +310,7 @@ impl Asm {
             TACInst::Return(opt) => {
                 if let Some(t) = opt {
                     let src = self.temp_for(t);
-                    self.emit(&format!("\tmovq\t{}, %rax", src));
+                    self.emit(format!("\tmovq\t{}, %rax", src));
                 }
                 // emit an actual return here; TAC's shared epilogue (label + ret) will be emitted where present
                 self.emit("\tmovq\t%rbp, %rsp");
@@ -346,7 +346,7 @@ impl Asm {
                 }
             }
             TACTemp::NamedTemp(name) => {
-                let k = CompactString::from(name);
+                let k = name;
                 if let Some(&s) = self.named.get(&k) {
                     self.format_temp_slot(s)
                 } else if let Some(&sp) = self.tparams.get(&k) {

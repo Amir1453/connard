@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// unary minus on bool
+def main() {
+  var x = -true : int;
+  print(x);
+}

@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// return without value in int function
+def get_value() : int {
+  return;
+}
+
+def main() {
+  print(get_value());
+}

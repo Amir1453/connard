@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// negative array/invalid syntax
+def main() {
+  var x = [1, 2, 3] : int;
+  print(42);
+}

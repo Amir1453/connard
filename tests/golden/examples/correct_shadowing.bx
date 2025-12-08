@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+    
+    def level1() {
+        var x = 20 : int;
+        
+        def level2() {
+            // Which x? Should be level1's x = 20
+            print(x);
+        }
+        
+        level2();
+    }
+    
+    level1();
+}

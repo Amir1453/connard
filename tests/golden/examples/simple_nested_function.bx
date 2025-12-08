@@ -1,0 +1,11 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+    def nested_function() {
+        print(x);
+        x = 5;
+        print(x);
+    }
+    nested_function();
+}

@@ -1,5 +1,0 @@
-def main() {
-  var y = 20 : int;
-  { var y = true : bool; }
-  print(y);
-}

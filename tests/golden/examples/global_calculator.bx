@@ -1,0 +1,45 @@
+// Test complex calculator using globals
+extern def print(n : int);
+
+var result = 0 : int;
+var operand1 = 0 : int;
+var operand2 = 0 : int;
+
+def load_operands(a : int, b : int) {
+  operand1 = a;
+  operand2 = b;
+}
+
+def add() {
+  result = operand1 + operand2;
+}
+
+def subtract() {
+  result = operand1 - operand2;
+}
+
+def multiply() {
+  result = operand1 * operand2;
+}
+
+def use_result_as_operand1() {
+  operand1 = result;
+}
+
+def main() {
+  load_operands(15, 5);
+  print(operand1);
+  print(operand2);
+  
+  add();
+  print(result);
+  
+  load_operands(20, 3);
+  multiply();
+  print(result);
+  
+  use_result_as_operand1();
+  load_operands(result, 10);
+  subtract();
+  print(result);
+}

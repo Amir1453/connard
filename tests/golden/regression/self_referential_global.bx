@@ -1,0 +1,8 @@
+// recursive type in global
+extern def print(n : int);
+
+var x = x + 1 : int;
+
+def main() {
+  print(x);
+}

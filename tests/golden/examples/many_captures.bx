@@ -1,0 +1,21 @@
+extern def print(n : int);
+
+def main() {
+    var a = 1 : int;
+    var b = 2 : int;
+    var c = 3 : int;
+    var d = 4 : int;
+    var e = 5 : int;
+    
+    def nested() {
+        print(a + b + c + d + e);
+        a = 10;
+        b = 20;
+        c = 30;
+        d = 40;
+        e = 50;
+    }
+    
+    nested();
+    print(a + b + c + d + e);
+}

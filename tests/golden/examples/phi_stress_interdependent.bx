@@ -1,0 +1,43 @@
+// Multiple variables updated in complex patterns
+extern def print(n : int);
+
+def main() {
+    var a = 0 : int;
+    var b = 0 : int;
+    var c = 0 : int;
+    var d = 0 : int;
+    var i = 0 : int;
+    
+    a = 1;
+    b = 2;
+    c = 3;
+    d = 4;
+    i = 0;
+    
+    while (i < 5) {
+        if (i % 2 == 0) {
+            a = a + b;
+            c = c + d;
+        } else {
+            b = b + c;
+            d = d + a;
+        }
+        
+        if (a > 10) {
+            a = a - 5;
+            b = b + 1;
+        }
+        
+        if (c > 20) {
+            c = c - 8;
+            d = d + 2;
+        }
+        
+        i = i + 1;
+    }
+    
+    print(a);
+    print(b);
+    print(c);
+    print(d);
+}

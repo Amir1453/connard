@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// invalid type name
+def main() {
+  var x = 10 : integer;
+  print(x);
+}

@@ -1,0 +1,12 @@
+extern def print(n : int);
+
+def main() {
+    var x = 5 : int;
+    
+    def nested() : int {
+        return x;
+    }
+    
+    // Try to return a function - should fail type checking
+    var f = nested : function() -> int;
+}

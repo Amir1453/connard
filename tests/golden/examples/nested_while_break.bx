@@ -1,0 +1,19 @@
+// Test nested while loops with break
+extern def print(n : int);
+
+def main() {
+  var i = 0 : int;
+  while (i < 5) {
+    var j = 0 : int;
+    while (j < 5) {
+      if (i == 2) {
+        if (j == 3) {
+          break;
+        }
+      }
+      print(i * 10 + j);
+      j = j + 1;
+    }
+    i = i + 1;
+  }
+}

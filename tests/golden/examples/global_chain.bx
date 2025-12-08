@@ -1,0 +1,34 @@
+// Test chaining global modifications across multiple functions
+extern def print(n : int);
+
+var x = 1 : int;
+var y = 2 : int;
+var z = 3 : int;
+
+def add_x_to_y() {
+  y = y + x;
+}
+
+def multiply_y_to_z() {
+  z = z * y;
+}
+
+def triple_x() {
+  x = x * 3;
+}
+
+def cascade() {
+  triple_x();        // x becomes 3
+  add_x_to_y();      // y becomes 2 + 3 = 5
+  multiply_y_to_z(); // z becomes 3 * 5 = 15
+}
+
+def main() {
+  print(x);
+  print(y);
+  print(z);
+  cascade();
+  print(x);
+  print(y);
+  print(z);
+}

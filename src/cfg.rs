@@ -59,7 +59,7 @@ impl CFG {
 
         let mut dfs = Dfs::new(&self.graph, entry);
 
-        while let Some(_) = dfs.next(&self.graph) {}
+        while dfs.next(&self.graph).is_some() {}
 
         let unreachable_nodes: Vec<NodeIndex> = self
             .graph

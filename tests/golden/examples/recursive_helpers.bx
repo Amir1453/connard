@@ -1,0 +1,35 @@
+// Test recursive helper functions
+extern def print(n : int);
+
+def sum_range_recursive(start, end : int) : int {
+  if (start > end) {
+    return 0;
+  }
+  return start + sum_range_recursive(start + 1, end);
+}
+
+def power(base, exp : int) : int {
+  if (exp == 0) {
+    return 1;
+  }
+  if (exp == 1) {
+    return base;
+  }
+  return base * power(base, exp - 1);
+}
+
+def gcd(a, b : int) : int {
+  if (b == 0) {
+    return a;
+  }
+  return gcd(b, a % b);
+}
+
+def main() {
+  print(sum_range_recursive(1, 5));
+  print(sum_range_recursive(1, 10));
+  print(power(2, 5));
+  print(power(3, 3));
+  print(gcd(48, 18));
+  print(gcd(100, 35));
+}

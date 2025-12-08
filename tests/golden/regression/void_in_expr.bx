@@ -1,0 +1,10 @@
+// calling void function in expression
+extern def print(n : int);
+
+def print_five() {
+  print(5);
+}
+
+def main() {
+  var x = print_five() : int;
+}

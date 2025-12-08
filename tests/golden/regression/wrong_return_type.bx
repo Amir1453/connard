@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// return type mismatch
+def get_number() : int {
+  return true;
+}
+
+def main() {
+  print(get_number());
+}

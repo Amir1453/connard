@@ -1,0 +1,23 @@
+extern def print(n : int);
+
+def call_with_both(f : function(int) -> int, g : function(int) -> void, x : int) {
+    g(f(x));
+}
+
+def main() {
+    var sum = 0 : int;
+    
+    def double(n : int) : int {
+        return n * 2;
+    }
+    
+    def add_to_sum(n : int) {
+        sum = sum + n;
+    }
+    
+    call_with_both(double, add_to_sum, 5);
+    print(sum);
+    
+    call_with_both(double, add_to_sum, 10);
+    print(sum);
+}

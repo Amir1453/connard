@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// division by zero
+def main() {
+  var x = 10 / 0 : int;
+  print(x);
+}

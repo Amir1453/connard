@@ -1,0 +1,19 @@
+extern def print(n : int);
+
+def apply_twice_nested(x : int) : int {
+    var base = 5 : int;
+    
+    def adder(n : int) : int {
+        return n + base;
+    }
+    
+    def apply_twice(f : function(int) -> int, val : int) : int {
+        return f(f(val));
+    }
+    
+    return apply_twice(adder, x);
+}
+
+def main() {
+    print(apply_twice_nested(10));
+}

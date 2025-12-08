@@ -1,0 +1,16 @@
+extern def print(n : int);
+
+def main() {
+    var x = 5 : int;
+    
+    def add_x(n : int) : int {
+        return n + x;
+    }
+    
+    def mul_x(n : int) : int {
+        return n * x;
+    }
+    
+    print(add_x(10));
+    print(mul_x(3));
+}

@@ -1,0 +1,35 @@
+// Test mixing local variables, parameters, and globals
+extern def print(n : int);
+
+var global_offset = 100 : int;
+
+def add_with_offset(x : int) : int {
+  var local_result = x + global_offset : int;
+  return local_result;
+}
+
+def multiply_and_add(a, b : int) : int {
+  var product = a * b : int;
+  var with_offset = product + global_offset : int;
+  return with_offset;
+}
+
+def update_offset(new_val : int) {
+  global_offset = new_val;
+}
+
+def main() {
+  var test1 = add_with_offset(50) : int;
+  print(test1);
+  
+  var test2 = multiply_and_add(3, 4) : int;
+  print(test2);
+  
+  update_offset(200);
+  
+  var test3 = add_with_offset(50) : int;
+  print(test3);
+  
+  var test4 = multiply_and_add(3, 4) : int;
+  print(test4);
+}

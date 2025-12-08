@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def apply(f : function(int) -> int, x : int) : int {
+    return f(x);
+}
+
+def main() {
+    def inc(n : int) : int {
+        return n + 1;
+    }
+    
+    // Wrong type - inc takes int, not two ints
+    def wrong(a : int, b : int) : int {
+        return a + b;
+    }
+    
+    print(apply(wrong, 5));
+}

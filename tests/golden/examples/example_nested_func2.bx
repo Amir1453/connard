@@ -1,0 +1,14 @@
+extern def print(n : int);
+
+def main() {
+  var y = 5 : int;
+  def inc(n : int) : int {
+    return n + 1;
+  }
+  if (y < 10) {
+    def show(n : int) : void {
+      print(inc(n));
+    }
+    show(y);
+  }
+}

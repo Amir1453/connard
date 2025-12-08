@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+var x = 42 : int;
+def main() {
+  x = ~x;
+  print(x);
+}

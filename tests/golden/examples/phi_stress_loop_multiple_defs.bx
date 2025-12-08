@@ -1,0 +1,32 @@
+// Variable that keeps being redefined in loop with break
+extern def print(n : int);
+
+def main() {
+    var x = 0: int;
+    var y = 0: int;
+    var i = 0: int;
+    
+    x = 0;
+    y = 10;
+    i = 0;
+    
+    while (i < 10) {
+        if (i == 3) {
+            x = 100;
+        }
+        if (i == 5) {
+            x = 200;
+        }
+        if (i == 7) {
+            x = 300;
+        }
+        if (x > 250) {
+            y = y + x;
+            x = 0;
+        }
+        i = i + 1;
+    }
+    
+    print(x);
+    print(y);
+}

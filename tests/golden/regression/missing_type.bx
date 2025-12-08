@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// missing type annotation
+def main() {
+  var x = 10;
+  print(x);
+}

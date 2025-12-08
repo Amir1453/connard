@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    var x = 0 : int;
+    
+    def nested() {
+        x = 1;
+        
+        def deeply_nested() {
+            x = 2;
+        }
+        
+        deeply_nested();
+    }
+    
+    nested();
+    print(x);
+}

@@ -1,0 +1,13 @@
+extern def print(n : int);
+
+def main() {
+    if (1 > 0) {
+        def inner() {
+            print(1);
+        }
+        inner();
+    }
+    
+    // inner() is out of scope here - should fail
+    inner();
+}

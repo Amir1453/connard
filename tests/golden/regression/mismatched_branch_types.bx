@@ -1,0 +1,14 @@
+// mismatched types in ternary-style
+extern def print(n : int);
+
+def get_value(flag : bool) : int {
+  if (flag) {
+    return 5;
+  } else {
+    return true;
+  }
+}
+
+def main() {
+  print(get_value(true));
+}

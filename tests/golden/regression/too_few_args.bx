@@ -1,0 +1,10 @@
+// too few arguments
+extern def print(n : int);
+
+def add(a, b, c : int) : int {
+  return a + b + c;
+}
+
+def main() {
+  print(add(5, 10));
+}

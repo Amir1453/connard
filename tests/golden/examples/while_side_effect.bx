@@ -1,0 +1,15 @@
+// Test empty while body with side effects in condition
+extern def print(n : int);
+
+var counter = 0 : int;
+
+def increment() : bool {
+  counter = counter + 1;
+  return counter < 5;
+}
+
+def main() {
+  while (increment()) {
+  }
+  print(counter);
+}

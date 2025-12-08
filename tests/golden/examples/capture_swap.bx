@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+    var y = 20 : int;
+    
+    def swap() {
+        var temp = x : int;
+        x = y;
+        y = temp;
+    }
+    
+    print(x);
+    print(y);
+    swap();
+    print(x);
+    print(y);
+}

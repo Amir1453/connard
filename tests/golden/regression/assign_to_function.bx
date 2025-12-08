@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// assigning to function
+def add(a, b : int) : int {
+  return a + b;
+}
+
+def main() {
+  add = 5;
+}

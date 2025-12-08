@@ -1,0 +1,38 @@
+// Test multiple functions modifying a shared accumulator
+extern def print(n : int);
+
+var accumulator = 0 : int;
+var multiplier = 1 : int;
+
+def add_five() {
+  accumulator = accumulator + 5;
+}
+
+def subtract_three() {
+  accumulator = accumulator - 3;
+}
+
+def apply_multiplier() {
+  accumulator = accumulator * multiplier;
+}
+
+def set_multiplier(m : int) {
+  multiplier = m;
+}
+
+def complex_calculation() {
+  add_five();           // 0 + 5 = 5
+  add_five();           // 5 + 5 = 10
+  subtract_three();     // 10 - 3 = 7
+  set_multiplier(2);
+  apply_multiplier();   // 7 * 2 = 14
+  subtract_three();     // 14 - 3 = 11
+}
+
+def main() {
+  print(accumulator);
+  print(multiplier);
+  complex_calculation();
+  print(accumulator);
+  print(multiplier);
+}

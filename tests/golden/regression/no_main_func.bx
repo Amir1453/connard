@@ -1,0 +1,6 @@
+// missing main function
+extern def print(n : int);
+
+def helper() {
+  print(42);
+}

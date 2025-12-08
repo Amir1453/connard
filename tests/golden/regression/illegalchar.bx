@@ -1,0 +1,5 @@
+extern def print(n : int);
+
+def main() {
+  var x = 1 @ 2 : int;
+}

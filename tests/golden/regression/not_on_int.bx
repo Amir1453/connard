@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// logical not on int
+def main() {
+  var x = !42 : bool;
+  print(5);
+}

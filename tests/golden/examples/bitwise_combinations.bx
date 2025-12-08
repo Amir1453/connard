@@ -1,0 +1,26 @@
+// Test bitwise operations combinations
+extern def print(n : int);
+
+def bitwise_magic(a, b : int) : int {
+  var result = (a | b) & (a ^ b) : int;
+  return result;
+}
+
+def shift_and_combine(x : int) : int {
+  var left = x << 2 : int;
+  var right = x >> 1 : int;
+  return left + right;
+}
+
+def main() {
+  print(bitwise_magic(12, 10));
+  print(bitwise_magic(15, 7));
+  print(shift_and_combine(8));
+  print(shift_and_combine(16));
+  
+  var mask = 15 : int;
+  var value = 255 : int;
+  print(value & mask);
+  print(value | mask);
+  print(value ^ mask);
+}

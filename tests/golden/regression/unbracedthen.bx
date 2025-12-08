@@ -1,0 +1,8 @@
+extern def print(n : int);
+
+// braces are required for the then-branch of an if-else
+def main() {
+  var x = 20 : int;
+  if (x % 2 == 0)
+    print(42);
+}

@@ -1,0 +1,25 @@
+extern def print(n : int);
+
+def main() {
+    var x = 1 : int;
+    var y = 2 : int;
+    var z = 3 : int;
+    
+    def nest1() {
+        def nest2() {
+            def nest3() {
+                print(x + y + z);
+            }
+            nest3();
+        }
+        nest2();
+    }
+    
+    nest1();
+    
+    x = 10;
+    y = 20;
+    z = 30;
+    
+    nest1();
+}

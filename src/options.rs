@@ -13,7 +13,7 @@ pub enum WarningOptions {
     Pedantic,
 }
 
-const WARNINGS: LazyLock<HashMap<&'static str, WarningOptions>> = LazyLock::new(|| {
+static WARNINGS: LazyLock<HashMap<&'static str, WarningOptions>> = LazyLock::new(|| {
     use WarningOptions::*;
     HashMap::from([
         ("-W", W),
@@ -32,7 +32,7 @@ pub enum CFGInstrumentationOptions {
     PruneDeadCode,
 }
 
-const INST: LazyLock<HashMap<&'static str, CFGInstrumentationOptions>> = LazyLock::new(|| {
+static INST: LazyLock<HashMap<&'static str, CFGInstrumentationOptions>> = LazyLock::new(|| {
     use CFGInstrumentationOptions::*;
     HashMap::from([
         ("-fnone", Nonce),

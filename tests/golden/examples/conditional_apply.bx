@@ -1,0 +1,19 @@
+extern def print(n : int);
+
+def apply_if_positive(f : function(int) -> int, x : int) : int {
+    if (x > 0) {
+        return f(x);
+    } else {
+        return 0;
+    }
+    return 0;
+}
+
+def main() {
+    def square(n : int) : int {
+        return n * n;
+    }
+    
+    print(apply_if_positive(square, 5));
+    print(apply_if_positive(square, -3));
+}

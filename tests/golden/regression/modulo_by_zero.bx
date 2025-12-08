@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// modulo by zero
+def main() {
+  var x = 10 % 0 : int;
+  print(x);
+}

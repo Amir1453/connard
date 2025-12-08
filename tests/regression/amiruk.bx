@@ -1,6 +1,0 @@
-def main() {
-  if (10 == 20 == 10) {
-    break;
-  }
-  print(-1);
-}

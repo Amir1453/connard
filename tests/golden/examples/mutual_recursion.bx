@@ -1,0 +1,32 @@
+// Test mutual recursion pattern (simulated)
+extern def print(n : int);
+
+def is_even(n : int) : bool {
+  if (n == 0) {
+    return true;
+  }
+  return is_odd(n - 1);
+}
+
+def is_odd(n : int) : bool {
+  if (n == 0) {
+    return false;
+  }
+  return is_even(n - 1);
+}
+
+def main() {
+  if (is_even(4)) {
+    print(1);
+  }
+  
+  if (is_odd(5)) {
+    print(2);
+  }
+  
+  if (is_even(7)) {
+    print(3);
+  } else {
+    print(4);
+  }
+}

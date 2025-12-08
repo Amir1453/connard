@@ -1,0 +1,9 @@
+extern def print(n : int);
+
+// while condition must be bool
+def main() {
+  while (10) {
+    print(1);
+    break;
+  }
+}

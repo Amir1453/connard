@@ -1,0 +1,10 @@
+// break outside loop at function level
+extern def print(n : int);
+
+def test() {
+  break;
+}
+
+def main() {
+  test();
+}

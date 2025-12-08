@@ -1,0 +1,17 @@
+extern def print(n : int);
+
+def process(action : function(int) -> void, val : int) {
+    action(val);
+    action(val * 2);
+}
+
+def main() {
+    var total = 0 : int;
+    
+    def add_to_total(n : int) {
+        total = total + n;
+    }
+    
+    process(add_to_total, 5);
+    print(total);
+}

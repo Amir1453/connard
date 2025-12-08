@@ -1,0 +1,35 @@
+// Test boolean short-circuit simulation
+extern def print(n : int);
+
+def is_positive(n : int) : bool {
+  return n > 0;
+}
+
+def is_even(n : int) : bool {
+  return n % 2 == 0;
+}
+
+def main() {
+  var x = 10 : int;
+  var y = -5 : int;
+  
+  if (is_positive(x)) {
+    if (is_even(x)) {
+      print(1);
+    }
+  }
+  
+  if (is_positive(y)) {
+    if (is_even(y)) {
+      print(2);
+    }
+  }
+  
+  if (is_positive(x)) {
+    print(3);
+  } else {
+    if (is_even(x)) {
+      print(4);
+    }
+  }
+}

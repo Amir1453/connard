@@ -63,21 +63,18 @@ impl MM {
 
                     let ret_label = Label::Named("Ret".into());
 
-                    if let Some(_) = return_type {
+                    if return_type.is_some() {
                         let ret_temp = self.fresh_temp();
                         let mut copy_inst: Vec<(usize, TACInst)> =
                             Vec::with_capacity(instructions.len() / 4);
 
                         for (i, inst) in instructions.iter().enumerate() {
-                            match inst {
-                                Return(Some(tmp)) => {
-                                    let copy = Copi {
-                                        destination: ret_temp.clone(),
-                                        source: tmp.clone(),
-                                    };
-                                    copy_inst.push((i, copy));
-                                }
-                                _ => {}
+                            if let Return(Some(tmp)) = inst {
+                                let copy = Copi {
+                                    destination: ret_temp.clone(),
+                                    source: tmp.clone(),
+                                };
+                                copy_inst.push((i, copy));
                             }
                         }
 
@@ -90,9 +87,8 @@ impl MM {
                         instructions.push(Return(Some(ret_temp.clone())));
                     } else {
                         for inst in instructions.iter_mut() {
-                            match inst {
-                                Return(None) => *inst = UnconditionalJump(ret_label.clone()),
-                                _ => {}
+                            if let Return(None) = inst {
+                                *inst = UnconditionalJump(ret_label.clone())
                             }
                         }
 
@@ -315,7 +311,21 @@ impl MM {
                 } => {
                     let arg_count = proc_args.as_ref().map(|v| v.len()).unwrap_or(0);
 
-                    for (i, exp) in proc_args.into_iter().flatten().enumerate() {
+                    let mut iexp = proc_args.into_iter().flatten().enumerate();
+                    let mut first_exp_type = Type::Error;
+
+                    if let Some((i, expr)) = iexp.next() {
+                        let exp = *expr;
+                        first_exp_type = exp.get_type();
+
+                        let temp = self.munch_expression(exp);
+                        self.emit(Parameter {
+                            nth_param: i + 1,
+                            source_temp: temp,
+                        });
+                    }
+
+                    for (i, exp) in iexp {
                         let temp = self.munch_expression(*exp);
                         self.emit(Parameter {
                             nth_param: i + 1,
@@ -324,16 +334,36 @@ impl MM {
                     }
 
                     let result = self.fresh_temp();
-                    self.emit(ProcCall {
-                        proc_name,
-                        arg_count,
-                        result: result.clone(),
-                    });
+                    if proc_name == "print" {
+                        match first_exp_type {
+                            Type::Int => {
+                                self.emit(ProcCall {
+                                    proc_name: Name::from("__print_int"),
+                                    arg_count,
+                                    result: result.clone(),
+                                });
+                            }
+                            Type::Bool => {
+                                self.emit(ProcCall {
+                                    proc_name: Name::from("__print_bool"),
+                                    arg_count,
+                                    result: result.clone(),
+                                });
+                            }
+                            _ => {}
+                        }
+                    } else {
+                        self.emit(ProcCall {
+                            proc_name,
+                            arg_count,
+                            result: result.clone(),
+                        });
+                    }
 
                     result
                 }
 
-                _ => todo!(),
+                _ => unreachable!(),
             }
         }
     }
@@ -410,12 +440,8 @@ impl MM {
                 operator, value, ..
             } => {
                 use Operator::*;
-                match &operator {
-                    LNot => {
-                        self.munch_boolean_expression(*value, flabel, tlabel);
-                    }
-
-                    _ => {}
+                if let LNot = &operator {
+                    self.munch_boolean_expression(*value, flabel, tlabel);
                 }
             }
 

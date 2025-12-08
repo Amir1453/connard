@@ -1,0 +1,15 @@
+extern def print(n : int);
+
+def main() {
+    def g(x : int) : int {
+        return x * 2;
+    }
+    {
+        print(g(5)); // should print 10
+        def g(x : int) : int {
+            return x + 3;
+        }
+        print(g(5)); // should print 8
+    }
+    print(g(6)); // should print 12
+}

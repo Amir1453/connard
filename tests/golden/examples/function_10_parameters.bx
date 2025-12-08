@@ -1,0 +1,9 @@
+extern def print(n : int);
+
+def add(a, b, c, d, e, f, g, h, i, j : int) : int {
+    return a + b + c + d + e + f + g + h + i + j;
+}
+
+def main() {
+    print(add(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+}

@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// boolean operation on int
+def main() {
+  var x = 5 && 10 : bool;
+  print(42);
+}

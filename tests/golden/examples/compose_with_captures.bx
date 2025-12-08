@@ -1,0 +1,20 @@
+extern def print(n : int);
+
+def compose(f : function(int) -> int, g : function(int) -> int, x : int) : int {
+    return f(g(x));
+}
+
+def main() {
+    var a = 2 : int;
+    var b = 3 : int;
+    
+    def mul_a(n : int) : int {
+        return n * a;
+    }
+    
+    def add_b(n : int) : int {
+        return n + b;
+    }
+    
+    print(compose(mul_a, add_b, 5));
+}

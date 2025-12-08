@@ -1,0 +1,9 @@
+extern def print(n : int);
+
+// recursive type dependency
+var x = y + 1 : int;
+var y = x + 1 : int;
+
+def main() {
+  print(x);
+}

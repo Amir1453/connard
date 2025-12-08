@@ -1,0 +1,9 @@
+extern def print(n : int);
+
+// break at top level
+var x = 5 : int;
+break;
+
+def main() {
+  print(x);
+}

@@ -1,0 +1,13 @@
+extern def print(n : int);
+
+def check_n(n : int) : bool {
+    return n > 0;
+}
+
+def main() {
+    var n = 10 : int;
+    while(check_n(n)) {
+        print(n);
+        n = n - 1;
+    }
+}

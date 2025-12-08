@@ -63,7 +63,7 @@ impl Driver {
                             proc_name.clone(),
                             SemanticType::ProcType(ProcType {
                                 args_type: proc_args.clone(),
-                                return_type: return_type.clone(),
+                                return_type: *return_type,
                             }),
                         );
                     }

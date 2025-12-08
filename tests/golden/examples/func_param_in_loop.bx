@@ -1,0 +1,23 @@
+extern def print(n : int);
+
+def apply_n_times(f : function(int) -> int, n : int, x : int) : int {
+    var i = 0 : int;
+    var result = x : int;
+    
+    while (i < n) {
+        result = f(result);
+        i = i + 1;
+    }
+    
+    return result;
+}
+
+def main() {
+    var base = 3 : int;
+    
+    def add_base(n : int) : int {
+        return n + base;
+    }
+    
+    print(apply_n_times(add_base, 4, 0));
+}

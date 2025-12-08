@@ -1,0 +1,13 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+    
+    def modify_x() {
+        x = 20;
+    }
+    
+    print(x);
+    modify_x();
+    print(x);
+}

@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+def main() {
+    def inner() {
+        // Try to call itself - inner functions can't be recursive
+        inner();
+    }
+    
+    print(42);
+}

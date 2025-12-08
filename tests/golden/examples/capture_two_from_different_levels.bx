@@ -1,0 +1,21 @@
+extern def print(n : int);
+
+def main() {
+    var x = 100 : int;
+    var y = 200 : int;
+    
+    def outer() {
+        var a = 10 : int;
+        
+        def inner() {
+            x = x + a;
+            y = y + a;
+        }
+        
+        inner();
+        print(x);
+        print(y);
+    }
+    
+    outer();
+}

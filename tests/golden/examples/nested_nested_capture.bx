@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    var counter = 0 : int;
+    
+    def make_printer(prefix : int) {
+        def printer() {
+            print(prefix + counter);
+            counter = counter + 1;
+        }
+        
+        printer();
+    }
+    
+    make_printer(100);
+    make_printer(200);
+    make_printer(300);
+}

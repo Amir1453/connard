@@ -1,0 +1,35 @@
+extern def print(n : int);
+
+// higher_order receives:
+//   f : function(function(function(int)->int, int)->int, int) -> int
+//   x : int
+def higher_order(f: function(function(function(int)->int, int)->int, int)->int, x: int): int {
+
+    // inner must match the function expected by f:
+    // inner : function(function(int)->int, int) -> int
+    def inner(g: function(int)->int, y: int): int {
+        return g(y);
+    }
+
+    // Call f with inner and x — types now align perfectly
+    return f(inner, x);
+}
+
+def main() {
+
+    // caller must accept:
+    //    func : function(function(int)->int, int) -> int
+    //    n : int
+    def caller(func: function(function(int)->int, int)->int, n: int): int {
+        def double(x: int): int { return x * 2; }
+
+        // func expects (function(int)->int, int) → int
+        // double : function(int)->int, n : int
+        return func(double, n);
+    }
+
+    // Everything type-aligns now:
+    // higher_order expects f : function(function(function(int)->int, int)->int, int) -> int
+    // caller matches that type
+    print(higher_order(caller, 5));
+}

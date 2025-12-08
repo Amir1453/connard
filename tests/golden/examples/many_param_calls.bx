@@ -1,0 +1,19 @@
+extern def print(n : int);
+
+def call_seven_times(f : function(int) -> int) {
+    print(f(1));
+    print(f(2));
+    print(f(3));
+    print(f(4));
+    print(f(5));
+    print(f(6));
+    print(f(7));
+}
+
+def main() {
+    def square(n : int) : int {
+        return n * n;
+    }
+    
+    call_seven_times(square);
+}

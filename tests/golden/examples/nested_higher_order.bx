@@ -1,0 +1,17 @@
+extern def print(n : int);
+
+def apply(f : function(function(int) -> int, int) -> int, g : function(int) -> int, x : int) : int {
+    return f(g, x);
+}
+
+def caller(func : function(int) -> int, n : int) : int {
+    return func(n);
+}
+
+def main() {
+    def triple(x : int) : int {
+        return x * 3;
+    }
+    
+    print(apply(caller, triple, 7));
+}

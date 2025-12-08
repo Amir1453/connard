@@ -22,19 +22,10 @@ pub enum Type {
     Error,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct ProcType {
     pub args_type: Option<Vec<(Name, Type)>>,
     pub return_type: Option<Type>,
-}
-
-impl Default for ProcType {
-    fn default() -> Self {
-        Self {
-            args_type: None,
-            return_type: None,
-        }
-    }
 }
 
 // Scope

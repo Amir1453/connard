@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+def main() {
+  var x = 10 : int;
+  { var y = 20 : int;
+    var y = 30 : int; }
+}

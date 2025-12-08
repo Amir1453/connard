@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    def outer() {
+        def inner1() {
+            print(1);
+        }
+        
+        // Try to call inner2 before it's declared
+        inner2();
+        
+        def inner2() {
+            print(2);
+        }
+    }
+    
+    outer();
+}

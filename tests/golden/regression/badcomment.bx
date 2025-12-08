@@ -1,0 +1,4 @@
+extern def print(n : int);
+
+/* BX doesn't have C style comments */
+def main() { }

@@ -1,0 +1,55 @@
+// Complex control flow with early loop breaks and continues
+extern def print(n : int);
+
+def main() {
+    var outer = 0 : int;
+    var inner = 0 : int;
+    var sum = 0 : int;
+    var prod = 1 : int;
+    var flag = 0 : int;
+    
+    while (outer < 8) {
+        inner = 0;
+        flag = 0;
+        
+        while (inner < 8) {
+            if (inner == 2) {
+                if (outer % 2 == 0) {
+                    sum = sum + 10;
+                    inner = inner + 1;
+                } else {
+                    prod = prod + 2;
+                    inner = inner + 1;
+                }
+            } else {
+                if (inner == 5) {
+                    if (sum > 50) {
+                        flag = 1;
+                        inner = 100;
+                    } else {
+                        sum = sum + outer;
+                        inner = inner + 1;
+                    }
+                } else {
+                    if (outer + inner > 10) {
+                        prod = prod + 3;
+                    } else {
+                        sum = sum + 1;
+                    }
+                    inner = inner + 1;
+                }
+            }
+        }
+        
+        if (flag == 1) {
+            sum = sum - 5;
+        } else {
+            prod = prod + 1;
+        }
+        
+        outer = outer + 1;
+    }
+    
+    print(sum);
+    print(prod);
+}

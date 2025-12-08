@@ -1,0 +1,6 @@
+// Test for missing extern declaration
+// Should fail because print is not declared
+
+def main() {
+  print(42);
+}

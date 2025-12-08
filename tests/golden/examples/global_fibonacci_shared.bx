@@ -1,0 +1,49 @@
+// Test Fibonacci using shared global state
+extern def print(n : int);
+
+var prev = 0 : int;
+var curr = 1 : int;
+var next = 0 : int;
+
+def compute_next() {
+  next = prev + curr;
+}
+
+def shift_values() {
+  prev = curr;
+  curr = next;
+}
+
+def fib_step() {
+  compute_next();
+  shift_values();
+}
+
+def main() {
+  print(prev);
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+  
+  fib_step();
+  print(curr);
+}

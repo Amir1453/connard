@@ -1,0 +1,3 @@
+extern def print(n : int);
+
+def notmain() { }

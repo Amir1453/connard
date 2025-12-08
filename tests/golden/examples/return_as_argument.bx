@@ -1,0 +1,33 @@
+// Test passing return values as arguments
+extern def print(n : int);
+
+def square(n : int) : int {
+  return n * n;
+}
+
+def add_three(a, b, c : int) : int {
+  return a + b + c;
+}
+
+def max(a, b : int) : int {
+  if (a > b) {
+    return a;
+  }
+  return b;
+}
+
+def min(a, b : int) : int {
+  if (a < b) {
+    return a;
+  }
+  return b;
+}
+
+def main() {
+  print(square(square(2)));
+  print(add_three(square(2), square(3), square(4)));
+  print(max(square(5), square(4)));
+  print(min(square(5), square(4)));
+  print(square(max(3, 7)));
+  print(max(min(10, 5), min(20, 8)));
+}

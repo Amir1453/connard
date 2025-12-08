@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// empty parameter list with comma
+def test(,) {
+  print(42);
+}
+
+def main() {
+  test();
+}

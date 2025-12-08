@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def apply(f : function(int) -> int, g : function(int) -> int, x : int) : int {
+    if (x > 0) {
+        return f(x);
+    } else {
+        return g(x);
+    }
+    return 0;
+}
+
+def main() {
+    def neg(n : int) : int { return 0 - n; }
+    def id(n : int) : int { return n; }
+    
+    print(apply(id, neg, 5));
+    print(apply(id, neg, -3));
+}

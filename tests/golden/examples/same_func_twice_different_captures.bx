@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def twice(f : function(int) -> int, g : function(int) -> int, x : int) : int {
+    return f(g(x));
+}
+
+def main() {
+    var mult = 2 : int;
+    
+    def multiply(n : int) : int {
+        return n * mult;
+    }
+    
+    print(twice(multiply, multiply, 3));
+    
+    mult = 3;
+    print(twice(multiply, multiply, 3));
+}

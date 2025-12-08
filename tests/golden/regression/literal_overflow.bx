@@ -1,0 +1,7 @@
+// negative literal too large
+extern def print(n : int);
+
+def main() {
+  var x = -99999999999999999999 : int;
+  print(x);
+}

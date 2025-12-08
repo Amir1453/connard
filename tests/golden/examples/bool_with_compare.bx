@@ -1,0 +1,23 @@
+// Test boolean expressions with comparisons
+extern def print(n : int);
+
+def main() {
+  var a = 5 : int;
+  var b = 10 : int;
+  
+  if ((a < b) && (b < 20)) {
+    print(1);
+  }
+  
+  if ((a > b) || (b > 5)) {
+    print(2);
+  }
+  
+  if (!(a == b)) {
+    print(3);
+  }
+  
+  if ((a < b) && !(b > 100)) {
+    print(4);
+  }
+}

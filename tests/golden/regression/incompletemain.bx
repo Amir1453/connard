@@ -1,0 +1,4 @@
+extern def print(n : int);
+
+def main() {
+  print(42);

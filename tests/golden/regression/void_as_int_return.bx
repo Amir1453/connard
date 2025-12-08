@@ -1,0 +1,14 @@
+extern def print(n : int);
+
+def apply(f : function(int) -> int, x : int) : int {
+    return f(x);
+}
+
+def main() {
+    def void_func(n : int) {
+        print(n);
+    }
+    
+    // Wrong return type - expects int, gets void
+    print(apply(void_func, 5));
+}

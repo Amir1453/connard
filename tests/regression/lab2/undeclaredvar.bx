@@ -1,5 +1,0 @@
-def main() {
-  var x = 0 : int;
-  y = x + 20;
-  print(y);
-}

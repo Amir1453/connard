@@ -1,0 +1,7 @@
+// main with return type
+extern def print(n : int);
+
+def main() : int {
+  print(42);
+  return 0;
+}

@@ -1,0 +1,10 @@
+// multiple main functions
+extern def print(n : int);
+
+def main() {
+  print(1);
+}
+
+def main() {
+  print(2);
+}

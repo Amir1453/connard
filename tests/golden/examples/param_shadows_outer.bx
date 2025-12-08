@@ -1,0 +1,15 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+    
+    def outer(x : int) : int {
+        def inner() : int {
+            return x;
+        }
+        return inner();
+    }
+    
+    print(outer(5));
+    print(x);
+}

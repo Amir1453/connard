@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def apply_conditional(f : function(int) -> int, g : function(int) -> int, flag : int, x : int) : int {
+    if (flag == 0) {
+        return f(x);
+    } else {
+        return g(x);
+    }
+    return 0;
+}
+
+def main() {
+    def double(n : int) : int { return n * 2; }
+    def triple(n : int) : int { return n * 3; }
+    
+    print(apply_conditional(double, triple, 0, 5));
+    print(apply_conditional(double, triple, 1, 5));
+}

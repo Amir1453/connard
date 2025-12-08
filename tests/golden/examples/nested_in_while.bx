@@ -1,0 +1,15 @@
+extern def print(n : int);
+
+def main() {
+    var counter = 0 : int;
+    
+    def inc() {
+        counter = counter + 1;
+    }
+    
+    while (counter < 5) {
+        inc();
+    }
+    
+    print(counter);
+}

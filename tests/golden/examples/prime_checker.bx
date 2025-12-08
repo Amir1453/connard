@@ -1,0 +1,28 @@
+// Test prime number checker
+extern def print(n : int);
+
+def is_prime(n : int) : bool {
+  if (n < 2) {
+    return false;
+  }
+  
+  var i = 2 : int;
+  while (i * i <= n) {
+    if (n % i == 0) {
+      return false;
+    }
+    i = i + 1;
+  }
+  
+  return true;
+}
+
+def main() {
+  var n = 2 : int;
+  while (n <= 20) {
+    if (is_prime(n)) {
+      print(n);
+    }
+    n = n + 1;
+  }
+}

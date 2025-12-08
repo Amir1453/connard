@@ -1,0 +1,8 @@
+extern def print(n : int);
+
+// missing function body
+def test(x : int) : int;
+
+def main() {
+  print(test(5));
+}

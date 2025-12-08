@@ -18,7 +18,7 @@ use compact_str::CompactString;
 
 use crate::tac::{Label, ProcDecl, TACBinaryOpcode, TACInst, TACJumpOpcode, TACTemp};
 
-pub const FIBONACCI: LazyLock<ProcDecl> = LazyLock::new(|| {
+pub static FIBONACCI: LazyLock<ProcDecl> = LazyLock::new(|| {
     use TACInst::*;
 
     let n = CompactString::new("n");

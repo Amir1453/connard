@@ -1,0 +1,8 @@
+// global variable without initialization
+extern def print(n : int);
+
+var x : int;
+
+def main() {
+  print(x);
+}

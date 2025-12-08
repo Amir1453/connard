@@ -1,0 +1,8 @@
+extern def print(n : int);
+
+// calling non-function
+var x = 10 : int;
+
+def main() {
+  print(x(5));
+}

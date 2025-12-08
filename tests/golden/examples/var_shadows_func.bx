@@ -1,0 +1,11 @@
+// variable name same as function name
+extern def print(n : int);
+
+def test() : int {
+  return 5;
+}
+
+def main() {
+  var test = 10 : int;
+  print(test);
+}

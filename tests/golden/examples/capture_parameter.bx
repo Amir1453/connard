@@ -1,0 +1,18 @@
+extern def print(n : int);
+
+def main() {
+    var x = 10 : int;
+
+    def func(n : int) {
+        def inner() {
+            print(n); // should print 5
+            n = n + x;
+        }
+        inner();
+        print(n); // should print 15
+        x = 12;
+    }
+
+    func(5);
+    print(x); // should print 12
+}

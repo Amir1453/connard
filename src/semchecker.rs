@@ -79,10 +79,11 @@ impl SemChecker {
                 self.check_expression(value);
             }
 
-            Statement::Return(expr) => match expr {
-                Some(expr) => self.check_expression(expr),
-                None => {}
-            },
+            Statement::Return(expr) => {
+                if let Some(expr) = expr {
+                    self.check_expression(expr)
+                }
+            }
 
             Statement::If {
                 condition,
@@ -181,7 +182,7 @@ impl SemChecker {
     // Stack Helper functions
 
     fn current_scope_contains(&mut self, name: &Name) -> bool {
-        self.scopes.top().map_or(false, |s| s.contains(name))
+        self.scopes.top().is_some_and(|s| s.contains(name))
     }
 
     fn current_scope_insert(&mut self, name: Name) {

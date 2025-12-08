@@ -1,0 +1,28 @@
+// Test deeply nested scopes
+extern def print(n : int);
+
+def main() {
+  var x = 1 : int;
+  print(x);
+  
+  if (x > 0) {
+    var x = 2 : int;
+    print(x);
+    
+    if (x > 1) {
+      var x = 3 : int;
+      print(x);
+      
+      if (x > 2) {
+        var x = 4 : int;
+        print(x);
+      }
+      
+      print(x);
+    }
+    
+    print(x);
+  }
+  
+  print(x);
+}

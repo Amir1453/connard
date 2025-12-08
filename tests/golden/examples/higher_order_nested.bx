@@ -1,0 +1,16 @@
+extern def print(n : int);
+
+def higher(f : function(function(int) -> int) -> int) : int {
+    def id(x : int) : int {
+        return x;
+    }
+    return f(id);
+}
+
+def main() {
+    def caller(g : function(int) -> int) : int {
+        return g(42);
+    }
+    
+    print(higher(caller));
+}

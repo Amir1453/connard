@@ -1,0 +1,22 @@
+extern def print(n : int);
+
+def apply(f : function(int) -> int, x : int) : int {
+    return f(x);
+}
+
+def main() {
+    var result = 0 : int;
+    
+    def func_with_side_effect(n : int) : int {
+        result = result + n;
+        return n * 2;
+    }
+    
+    var val = apply(func_with_side_effect, 5) : int;
+    print(val);
+    print(result);
+    
+    val = apply(func_with_side_effect, 10);
+    print(val);
+    print(result);
+}

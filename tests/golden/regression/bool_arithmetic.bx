@@ -1,0 +1,7 @@
+// using bool in arithmetic
+extern def print(n : int);
+
+def main() {
+  var x = true + false : int;
+  print(x);
+}

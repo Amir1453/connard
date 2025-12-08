@@ -1,0 +1,7 @@
+extern def print(n : int);
+
+// using variable before declaration
+def main() {
+  print(x);
+  var x = 10 : int;
+}

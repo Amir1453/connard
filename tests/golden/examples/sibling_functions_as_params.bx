@@ -1,0 +1,12 @@
+extern def print(n : int);
+
+def apply(f : function(int) -> int, g : function(int) -> int, x : int) : int {
+    return f(x) + g(x);
+}
+
+def main() {
+    def double(n : int) : int { return n * 2; }
+    def triple(n : int) : int { return n * 3; }
+    
+    print(apply(double, triple, 5));
+}

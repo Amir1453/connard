@@ -1,0 +1,10 @@
+extern def print(n : int);
+
+// missing return in non-void function
+def get_number() : int {
+  var x = 5 : int;
+}
+
+def main() {
+  print(get_number());
+}

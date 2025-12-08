@@ -1,0 +1,35 @@
+extern def print(n : int);
+
+// Large test: Computing GCD using Euclidean algorithm
+var global_a = 48 : int;
+var global_b = 18 : int;
+
+def gcd(a, b : int) : int {
+  while (b != 0) {
+    var temp = b : int;
+    b = a % b;
+    a = temp;
+  }
+  return a;
+}
+
+def lcm(a, b : int) : int {
+  return (a * b) / gcd(a, b);
+}
+
+def test_gcd_lcm(x, y : int) {
+  print(x);
+  print(y);
+  print(gcd(x, y));
+  print(lcm(x, y));
+}
+
+def main() {
+  test_gcd_lcm(global_a, global_b);
+  test_gcd_lcm(100, 50);
+  test_gcd_lcm(17, 19);
+  
+  global_a = 120;
+  global_b = 75;
+  test_gcd_lcm(global_a, global_b);
+}

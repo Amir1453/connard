@@ -1,0 +1,8 @@
+extern def print(n : int);
+
+// comparison between different types
+def main() {
+  if (5 == true) {
+    print(1);
+  }
+}
