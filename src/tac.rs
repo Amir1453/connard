@@ -24,7 +24,7 @@ pub struct GlobalVarDecl {
 
 pub struct ProcDecl {
     pub name: Name,
-    arguments: Option<Vec<Name>>,
+    pub arguments: Option<Vec<Name>>,
     pub instructions: InstBlock,
 }
 

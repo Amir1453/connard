@@ -1,5 +1,6 @@
 def main() {
-  var x = 5: int;
+  var y = 10 + x: int;
+  print(y);
 }
 
 //var x = 11: int;

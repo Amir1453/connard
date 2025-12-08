@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    asm::Asm,
     ast::{Declaration, Program},
     bxgrammar,
     lexer::Lexer,
@@ -91,13 +92,23 @@ impl Driver {
                 None => println!("Type Check successful @ {}!", cu),
             }
 
-            println!("Munching {}...", cu);
+            // println!("Munching {}...", cu);
             let cutac = MM::munch(cu_program);
             println!("{}", cutac);
 
-            println!("Optimizing {}...", cu);
+            // println!("Optimizing {}...", cu);
             let optimized_cutac = Optimizer::optimize(cutac);
             println!("{}", optimized_cutac);
+
+            let asm = Asm::lower(optimized_cutac);
+            // let asm = Asm::lower(cutac);
+            let out_path = format!(
+                "{}{}",
+                &cu[(cu.rfind('/').unwrap() + 1)..cu.rfind('.').unwrap()],
+                ".s"
+            );
+            std::fs::write(out_path, &asm).unwrap();
+            println!("{}", asm);
 
             // let proc = (*crate::tests::FIBONACCI).clone();
             // let fake_cutac = tac::CUTAC(vec![tac::TACDeclaration::ProcDecl(proc)]);

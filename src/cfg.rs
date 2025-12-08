@@ -1,6 +1,7 @@
 use core::fmt;
 use std::{collections::HashMap, fmt::Debug};
 
+// use compact_str::CompactString;
 use petgraph::{
     Direction,
     graph::NodeIndex,
@@ -10,6 +11,7 @@ use petgraph::{
 
 use crate::{
     tac::{Label, TACInst},
+    // types::{InstBlock, Name},
     types::InstBlock,
 };
 
@@ -190,6 +192,7 @@ impl From<BasicBlocks> for CFG {
 
 pub struct BasicBlocks {
     pub blocks: Vec<BasicBlock>,
+    // proc_name: Name,
     block_index: i64,
 }
 
@@ -197,6 +200,7 @@ impl BasicBlocks {
     fn empty() -> Self {
         Self {
             blocks: Vec::new(),
+            // proc_name: CompactString::new(""),
             block_index: -1,
         }
     }

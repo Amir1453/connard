@@ -34,7 +34,16 @@ impl SemChecker {
             match decl {
                 Declaration::Variable(var) => self.check_global_variable(var),
 
-                Declaration::Proc { block, .. } => self.check_block(block),
+                Declaration::Proc {
+                    block, proc_args, ..
+                } => {
+                    if let Some(args) = proc_args {
+                        args.iter()
+                            .for_each(|(name, _)| self.current_scope_insert(name.clone()));
+                    }
+
+                    self.check_block(block);
+                }
             }
         }
     }

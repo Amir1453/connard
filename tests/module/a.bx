@@ -1,1 +1,5 @@
 var x = 10 : int;
+
+def print(x: int) {
+
+}

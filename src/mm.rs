@@ -125,9 +125,11 @@ impl MM {
     }
 
     fn munch_block(&mut self, block: Block) {
+        self.vars.push(HashMap::new());
         for stmt in block.0 {
             self.munch_statement(stmt);
         }
+        self.vars.pop();
     }
 
     fn munch_statement(&mut self, stmt: Statement) {
@@ -487,6 +489,7 @@ impl MM {
                 return t.clone();
             }
         }
-        panic!("undefined variable {:?}", name);
+        TACTemp::GlobalVar(name.clone())
+        // panic!("undefined variable {:?}", name);
     }
 }

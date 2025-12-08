@@ -1,0 +1,30 @@
+// Test variable shadowing in nested scopes
+def print(n : int) {}
+
+var x = 10 : int;
+
+def test_shadow(x : int) : int {
+  var y = x + 5 : int;
+  return y;
+}
+
+def use_global() : int {
+  return x * 2;
+}
+
+def main() {
+  print(x);
+  print(test_shadow(20));
+  print(use_global());
+  
+  var x = 30 : int;
+  print(x);
+  print(test_shadow(x));
+  print(use_global());
+  
+  if (x > 20) {
+    var x = 50 : int;
+    print(x);
+  }
+  print(x);
+}

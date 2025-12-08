@@ -1,5 +1,5 @@
 // stress testing booleans: prints 42 or -42
-def main() {
+def main() : int{
   if (!
         !
           (! (true && true && (true || true)) ||
@@ -98,11 +98,12 @@ def main() {
               ! ! (! (! true || true && true) || ! (false || false || ! true)))
   {
     print(42);
+    return 42;
   } else {
-    print(-42);
+    return -42;
   }
 }
 
-def print(x: int) {
-
+def print(x:int) {
+  return;
 }

@@ -1,0 +1,13 @@
+// An intermediate function that executes the received function 'f'
+def fib(n : int) : int {
+    if (n <= 1) {
+        return n;
+    }
+    return fib(n - 2) + fib(n - 1);
+}
+
+def main() {
+    var n = 20 : int;
+    print(fib(n));
+}
+// Expected Output: 30

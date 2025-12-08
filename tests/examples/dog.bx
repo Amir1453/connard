@@ -4,16 +4,3 @@ def main() {
   var xz = 5: int;
   return;
 }
-
-def cat() : int {
-  var x = 10 : int;
-
-  if (x > 5) {
-    x = 5;
-    return x;
-  } else {
-    return x + 12;
-  }
-
-  return 5;
-}
