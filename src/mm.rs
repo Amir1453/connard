@@ -61,7 +61,7 @@ impl MM {
                     self.munch_block(*block);
                     let mut instructions = std::mem::take(&mut self.proc_instructions);
 
-                    let ret_label = Label::Named("Ret".into());
+                    let ret_label = Label::Named(format!("ret_{proc_name}").into());
 
                     if return_type.is_some() {
                         let ret_temp = self.fresh_temp();

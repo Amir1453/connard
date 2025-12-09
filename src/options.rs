@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, sync::LazyLock};
+use std::{collections::HashMap, env, path::PathBuf, sync::LazyLock};
 
 #[allow(dead_code)]
 pub enum MetaOptions {
@@ -44,7 +44,7 @@ static INST: LazyLock<HashMap<&'static str, CFGInstrumentationOptions>> = LazyLo
 });
 
 pub struct CompilerOptions {
-    pub compilation_units: Vec<String>,
+    pub compilation_units: Vec<PathBuf>,
     #[allow(dead_code)]
     pub warning_options: Vec<WarningOptions>,
     #[allow(dead_code)]
@@ -59,7 +59,7 @@ impl CompilerOptions {
 
         for i in env::args().skip(1) {
             if i.ends_with(".bx") {
-                compilation_units.push(i);
+                compilation_units.push(PathBuf::from(i));
                 continue;
             }
 

@@ -22,6 +22,8 @@ impl SemChecker {
     pub fn check(program: &Program, global_decls: HashSet<Name>) -> Option<Vec<SyntaxError>> {
         let mut sc = SemChecker::new();
         sc.scopes.push(global_decls);
+        sc.current_scope_insert(Name::from("print"));
+
         sc.check_program(program);
         match sc.errors.is_empty() {
             true => None,
@@ -37,12 +39,14 @@ impl SemChecker {
                 Declaration::Proc {
                     block, proc_args, ..
                 } => {
+                    self.scopes.push(HashSet::new());
                     if let Some(args) = proc_args {
                         args.iter()
                             .for_each(|(name, _)| self.current_scope_insert(name.clone()));
                     }
 
                     self.check_block(block);
+                    self.scopes.pop();
                 }
             }
         }

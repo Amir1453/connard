@@ -37,10 +37,21 @@ impl TypeChecker {
         for decl in &mut program.0 {
             match decl {
                 Declaration::Proc {
-                    proc_name, block, ..
+                    proc_name,
+                    block,
+                    proc_args,
+                    ..
                 } => {
                     self.current_proc_name = proc_name.clone();
+                    self.scopes.push(HashMap::new());
+
+                    for (name, ty) in proc_args.into_iter().flatten() {
+                        self.current_scope_insert_simple(name.clone(), ty.clone());
+                    }
+
                     self.check_block(block);
+
+                    self.scopes.pop();
                     self.current_proc_name.clear();
                 }
 
@@ -258,19 +269,28 @@ impl TypeChecker {
                 proc_args,
                 ty,
             } => {
-                let proc_type = self.find_proc_type(proc_name);
-                *ty = Some(proc_type.return_type.unwrap_or(Type::Void));
+                if proc_name == "print" {
+                    let arg = proc_args.as_mut().unwrap().first_mut().unwrap();
+                    self.check_expression(arg);
+                    let arg_type = arg.get_type();
+                    if arg_type != Type::Int && arg_type != Type::Bool {
+                        self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                    }
+                } else {
+                    let proc_type = self.find_proc_type(proc_name);
+                    *ty = Some(proc_type.return_type.unwrap_or(Type::Void));
 
-                if let (Some(args), Some(arg_supposed_types)) =
-                    (proc_args, proc_type.args_type.as_ref())
-                {
-                    for (arg, (_name, expected_ty)) in
-                        args.iter_mut().zip(arg_supposed_types.iter())
+                    if let (Some(args), Some(arg_supposed_types)) =
+                        (proc_args, proc_type.args_type.as_ref())
                     {
-                        self.check_expression(arg);
-                        let arg_type = arg.get_type();
-                        if arg_type != *expected_ty {
-                            self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                        for (arg, (_name, expected_ty)) in
+                            args.iter_mut().zip(arg_supposed_types.iter())
+                        {
+                            self.check_expression(arg);
+                            let arg_type = arg.get_type();
+                            if arg_type != *expected_ty {
+                                self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                            }
                         }
                     }
                 }
