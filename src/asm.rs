@@ -340,7 +340,7 @@ impl Asm {
                 if let Some(&slot) = self.temps.get(&i) {
                     self.format_temp_slot(slot)
                 } else {
-                    let s = self.temps.len();
+                    let s = self.temps.len() + self.named.len();
                     self.temps.insert(i, s);
                     self.format_temp_slot(s)
                 }
