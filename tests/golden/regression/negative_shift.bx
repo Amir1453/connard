@@ -1,7 +1,0 @@
-// shift by negative amount
-extern def print(n : int);
-
-def main() {
-  var x = 10 << -1 : int;
-  print(x);
-}

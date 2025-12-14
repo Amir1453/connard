@@ -71,6 +71,12 @@ impl Driver {
             }
         }
 
+        if !(global_decls.get("main").is_some()
+            && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
+        {
+            panic!()
+        }
+
         for (cu, mut cu_program) in cu_programs.into_iter() {
             match SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
                 Some(err) => {
@@ -158,6 +164,12 @@ impl Driver {
                     );
                 }
             }
+        }
+
+        if !(global_decls.get("main").is_some()
+            && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
+        {
+            panic!()
         }
 
         match SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
