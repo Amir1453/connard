@@ -5,6 +5,7 @@ use std::process::{Command, Stdio};
 use bx_compiler::driver::Driver;
 
 include!(concat!(env!("OUT_DIR"), "/gen_tests.rs"));
+include!(concat!(env!("OUT_DIR"), "/reg_tests.rs"));
 
 fn run(cmd: &mut Command) -> (String, String, i32) {
     let output = cmd.output().expect("failed to spawn process");

@@ -4,8 +4,12 @@ use std::{
 };
 
 fn main() {
+    println!("cargo::rerun-if-changed=src/bxgrammar.lalrpop");
+    println!("cargo::rerun-if-changed=tests/golden");
+
     lalrpop::process_root().unwrap();
     generate_integration_tests().unwrap();
+    generate_regression_tests().unwrap();
 }
 
 fn generate_integration_tests() -> Result<(), std::io::Error> {
@@ -26,7 +30,6 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 
     let mut src = String::new();
 
-    // src.push_str("use libcrate::run_file; use std::fs;\n");
     for entry in fs::read_dir(&test_dir).unwrap().filter_map(Result::ok) {
         let p = entry.path();
 
@@ -79,6 +82,50 @@ fn integration_{stem}() {{
             print_c = print_c.display(),
             exe_path = exe_path.display(),
             exoutput_file = exoutput_file.display()
+        ));
+    }
+
+    fs::write(dest_path, src)
+}
+
+fn generate_regression_tests() -> Result<(), std::io::Error> {
+    let out_dir = env::var_os("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("reg_tests.rs");
+
+    let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    let tmp_dir = cargo_manifest_dir.join("target").join("e2e_artifacts");
+    let _ = fs::create_dir_all(&tmp_dir).unwrap();
+
+    let test_dir = cargo_manifest_dir
+        .join("tests")
+        .join("golden")
+        .join("regression");
+
+    let mut src = String::new();
+
+    for entry in fs::read_dir(&test_dir).unwrap().filter_map(Result::ok) {
+        let p = entry.path();
+
+        if p.extension().and_then(|s| s.to_str()) != Some("bx") {
+            continue;
+        }
+
+        let stem = p.file_stem().unwrap().to_str().unwrap();
+        let asm_path = tmp_dir.join(format!("{}.s", stem));
+
+        src.push_str(&format!(
+            r#"
+#[test]
+#[should_panic]
+fn regression_{stem}() {{
+    let p = PathBuf::from("{p}");
+    let asm_path = PathBuf::from("{asm_path}");
+    let _ = Driver::drive(&p, &asm_path);
+}}
+"#,
+            p = p.display(),
+            asm_path = asm_path.display(),
         ));
     }
 

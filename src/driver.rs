@@ -122,7 +122,7 @@ impl Driver {
 
         let cu_source_code = std::fs::read_to_string(&cu)?;
         let cu_lexer = Lexer::new(&cu_source_code);
-        let mut cu_program = parser.parse(cu_lexer)?;
+        let mut cu_program = parser.parse(cu_lexer).unwrap();
 
         for decl in cu_program.0.iter() {
             match decl {
@@ -130,7 +130,8 @@ impl Driver {
                     let var = variable.as_ref();
                     for name in var.names.clone().into_iter() {
                         if global_decls.contains_key(&name) {
-                            return Err(format!("Duplicate Global Declaration: {}", &name).into());
+                            panic!("Duplicate Global Declaration !");
+                            // return Err(format!("Duplicate Global Declaration: {}", &name).into());
                         }
 
                         global_decls.insert(name, SemanticType::SimpleType(var.ty));
@@ -144,7 +145,8 @@ impl Driver {
                     ..
                 } => {
                     if global_decls.contains_key(proc_name) {
-                        return Err(format!("Duplicate Global Declaration: {}", &proc_name).into());
+                        panic!("Duplicate Global Declaration !");
+                        // return Err(format!("Duplicate Global Declaration: {}", &proc_name).into());
                     }
 
                     global_decls.insert(
