@@ -126,7 +126,7 @@ impl Driver {
 
         let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
 
-        let cu_source_code = std::fs::read_to_string(&cu)?;
+        let cu_source_code = std::fs::read_to_string(cu)?;
         let cu_lexer = Lexer::new(&cu_source_code);
         let mut cu_program = parser.parse(cu_lexer).unwrap();
 
@@ -172,24 +172,18 @@ impl Driver {
             panic!()
         }
 
-        match SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
-            Some(err) => {
-                for error in err {
-                    println!("{}: {:?}", cu.display(), error);
-                }
-                panic!()
+        if let Some(err) = SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
+            for error in err {
+                println!("{}: {:?}", cu.display(), error);
             }
-            None => {}
+            panic!()
         }
 
-        match TypeChecker::check(&mut cu_program, global_decls.clone()) {
-            Some(err) => {
-                for error in err {
-                    println!("{}: {:?}", cu.display(), error);
-                }
-                panic!()
+        if let Some(err) = TypeChecker::check(&mut cu_program, global_decls.clone()) {
+            for error in err {
+                println!("{}: {:?}", cu.display(), error);
             }
-            None => {}
+            panic!()
         }
 
         let cutac = MM::munch(cu_program);

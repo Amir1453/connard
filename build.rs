@@ -23,7 +23,7 @@ fn main() {
 }
 
 fn generate_tests() -> Result<(), std::io::Error> {
-    let _ = fs::create_dir_all(&*TMP_DIR)?;
+    fs::create_dir_all(&*TMP_DIR)?;
 
     generate_integration_tests()?;
     generate_regression_tests()
@@ -50,7 +50,7 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 
         let stem = p.file_stem().unwrap().to_str().unwrap();
         let asm_path = TMP_DIR.join(format!("{}.s", stem));
-        let exe_path = TMP_DIR.join(format!("{}", stem));
+        let exe_path = TMP_DIR.join(stem.to_string());
 
         let exoutput_file = test_dir.join(format!("{}_output.txt", stem));
 

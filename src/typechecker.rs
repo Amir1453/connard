@@ -45,8 +45,8 @@ impl TypeChecker {
                     self.current_proc_name = proc_name.clone();
                     self.scopes.push(HashMap::new());
 
-                    for (name, ty) in proc_args.into_iter().flatten() {
-                        self.current_scope_insert_simple(name.clone(), ty.clone());
+                    for (name, ty) in proc_args.iter_mut().flatten() {
+                        self.current_scope_insert_simple(name.clone(), *ty);
                     }
 
                     self.check_block(block);
