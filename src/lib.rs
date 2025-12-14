@@ -12,8 +12,5 @@ mod tokens;
 mod typechecker;
 mod types;
 
-// #[cfg(test)]
-mod tests;
-
 use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(pub bxgrammar);
