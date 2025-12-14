@@ -1,36 +1,47 @@
 use std::{
-    env, fs,
+    env,
+    ffi::OsString,
+    fs,
     path::{Path, PathBuf},
+    sync::LazyLock,
 };
+
+const OUT_DIR: LazyLock<OsString> = LazyLock::new(|| env::var_os("OUT_DIR").unwrap());
+
+const CARGO_MANIFEST_DIR: LazyLock<PathBuf> =
+    LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+
+const TMP_DIR: LazyLock<PathBuf> =
+    LazyLock::new(|| CARGO_MANIFEST_DIR.join("target").join("e2e_artifacts"));
 
 fn main() {
     println!("cargo::rerun-if-changed=src/bxgrammar.lalrpop");
     println!("cargo::rerun-if-changed=tests/golden");
 
     lalrpop::process_root().unwrap();
-    generate_integration_tests().unwrap();
-    generate_regression_tests().unwrap();
+    generate_tests().unwrap();
+}
+
+fn generate_tests() -> Result<(), std::io::Error> {
+    let _ = fs::create_dir_all(&*TMP_DIR)?;
+
+    generate_integration_tests()?;
+    generate_regression_tests()
 }
 
 fn generate_integration_tests() -> Result<(), std::io::Error> {
-    let out_dir = env::var_os("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("gen_tests.rs");
+    let dest_path = Path::new(&*OUT_DIR).join("gen_tests.rs");
 
-    let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-    let tmp_dir = cargo_manifest_dir.join("target").join("e2e_artifacts");
-    let _ = fs::create_dir_all(&tmp_dir).unwrap();
-
-    let test_dir = cargo_manifest_dir
+    let test_dir = CARGO_MANIFEST_DIR
         .join("tests")
         .join("golden")
         .join("examples");
 
-    let print_c = cargo_manifest_dir.join("src").join("print.c");
+    let print_c = CARGO_MANIFEST_DIR.join("bxruntime.c");
 
     let mut src = String::new();
 
-    for entry in fs::read_dir(&test_dir).unwrap().filter_map(Result::ok) {
+    for entry in fs::read_dir(&test_dir)?.filter_map(Result::ok) {
         let p = entry.path();
 
         if p.extension().and_then(|s| s.to_str()) != Some("bx") {
@@ -38,8 +49,8 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
         }
 
         let stem = p.file_stem().unwrap().to_str().unwrap();
-        let asm_path = tmp_dir.join(format!("{}.s", stem));
-        let exe_path = tmp_dir.join(format!("{}", stem));
+        let asm_path = TMP_DIR.join(format!("{}.s", stem));
+        let exe_path = TMP_DIR.join(format!("{}", stem));
 
         let exoutput_file = test_dir.join(format!("{}_output.txt", stem));
 
@@ -89,15 +100,9 @@ fn integration_{stem}() {{
 }
 
 fn generate_regression_tests() -> Result<(), std::io::Error> {
-    let out_dir = env::var_os("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("reg_tests.rs");
+    let dest_path = Path::new(&*OUT_DIR).join("reg_tests.rs");
 
-    let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-    let tmp_dir = cargo_manifest_dir.join("target").join("e2e_artifacts");
-    let _ = fs::create_dir_all(&tmp_dir).unwrap();
-
-    let test_dir = cargo_manifest_dir
+    let test_dir = CARGO_MANIFEST_DIR
         .join("tests")
         .join("golden")
         .join("regression");
@@ -112,7 +117,7 @@ fn generate_regression_tests() -> Result<(), std::io::Error> {
         }
 
         let stem = p.file_stem().unwrap().to_str().unwrap();
-        let asm_path = tmp_dir.join(format!("{}.s", stem));
+        let asm_path = TMP_DIR.join(format!("{}.s", stem));
 
         src.push_str(&format!(
             r#"
