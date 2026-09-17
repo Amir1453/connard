@@ -6,7 +6,7 @@ use crate::{
     bxgrammar,
     lexer::Lexer,
     mm::MM,
-    optimizer::Optimizer,
+    // optimizer::Optimizer,
     options::CompilerOptions,
     semchecker::SemChecker,
     typechecker::{SemanticType, TypeChecker},
@@ -18,6 +18,12 @@ pub struct Driver {}
 impl Driver {
     pub fn cli() -> Result<(), Box<dyn std::error::Error>> {
         let options = CompilerOptions::from_env();
+
+        if options.cu_is_empty() {
+            println!("Maybe specify some files !");
+            return Ok(());
+        }
+
         let parser = bxgrammar::BXParser::new();
 
         let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
@@ -71,7 +77,7 @@ impl Driver {
             }
         }
 
-        if !(global_decls.get("main").is_some()
+        if !(global_decls.contains_key("main")
             && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
         {
             panic!()
@@ -103,9 +109,10 @@ impl Driver {
             println!("{}", cutac);
 
             // println!("Optimizing {}...", cu);
-            let optimized_cutac = Optimizer::optimize(cutac);
+            // let optimized_cutac = Optimizer::optimize(cutac);
 
-            let asm = Asm::lower(optimized_cutac);
+            // let asm = Asm::lower(optimized_cutac);
+            let asm = Asm::lower(cutac);
 
             let stem = cu
                 .file_stem()
@@ -114,7 +121,7 @@ impl Driver {
             let mut out_path = PathBuf::from(stem);
             out_path.set_extension("s");
 
-            std::fs::write(out_path, &asm).unwrap();
+            std::fs::write(out_path, &asm)?;
             println!("{}", asm);
         }
 
@@ -166,7 +173,7 @@ impl Driver {
             }
         }
 
-        if !(global_decls.get("main").is_some()
+        if !(global_decls.contains_key("main")
             && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
         {
             panic!()
@@ -187,10 +194,12 @@ impl Driver {
         }
 
         let cutac = MM::munch(cu_program);
+        std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
+
         // let optimized_cutac = Optimizer::optimize(cutac);
         // let asm = Asm::lower(optimized_cutac);
         let asm = Asm::lower(cutac);
-        std::fs::write(out_path, &asm).unwrap();
+        std::fs::write(out_path, &asm)?;
 
         Ok(())
     }

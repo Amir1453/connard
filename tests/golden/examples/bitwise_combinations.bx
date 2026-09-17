@@ -1,7 +1,7 @@
 // Test bitwise operations combinations
 extern def print(n : int);
 
-def bitwise_magic(a, b : int) : int {
+def bitwise_magic(a : int, b : int) : int {
   var result = (a | b) & (a ^ b) : int;
   return result;
 }

@@ -6,12 +6,12 @@ use std::{
     sync::LazyLock,
 };
 
-const OUT_DIR: LazyLock<OsString> = LazyLock::new(|| env::var_os("OUT_DIR").unwrap());
+static OUT_DIR: LazyLock<OsString> = LazyLock::new(|| env::var_os("OUT_DIR").unwrap());
 
-const CARGO_MANIFEST_DIR: LazyLock<PathBuf> =
+static CARGO_MANIFEST_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
 
-const TMP_DIR: LazyLock<PathBuf> =
+static TMP_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| CARGO_MANIFEST_DIR.join("target").join("e2e_artifacts"));
 
 fn main() {
@@ -50,7 +50,7 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 
         let stem = p.file_stem().unwrap().to_str().unwrap();
         let asm_path = TMP_DIR.join(format!("{}.s", stem));
-        let exe_path = TMP_DIR.join(stem.to_string());
+        let exe_path = TMP_DIR.join(stem);
 
         let exoutput_file = test_dir.join(format!("{}_output.txt", stem));
 

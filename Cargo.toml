@@ -18,3 +18,4 @@ petgraph = "0.8.3"
 
 [lints.clippy]
 vec_box = "allow"
+upper_case_acronyms = "allow"

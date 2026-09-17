@@ -189,11 +189,13 @@ impl MM {
 
                 self.loop_stack.push((clabel.clone(), olabel.clone()));
 
-                self.emit_label(clabel);
+                self.emit_label(clabel.clone());
                 self.munch_boolean_expression(*condition, blabel.clone(), olabel.clone());
 
                 self.emit_label(blabel);
                 self.munch_block(*block);
+
+                self.emit(UnconditionalJump(clabel));
 
                 self.emit_label(olabel);
 

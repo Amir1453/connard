@@ -4,7 +4,7 @@ extern def print(n : int);
 var global_a = 48 : int;
 var global_b = 18 : int;
 
-def gcd(a, b : int) : int {
+def gcd(a : int, b : int) : int {
   while (b != 0) {
     var temp = b : int;
     b = a % b;
@@ -13,11 +13,11 @@ def gcd(a, b : int) : int {
   return a;
 }
 
-def lcm(a, b : int) : int {
+def lcm(a : int, b : int) : int {
   return (a * b) / gcd(a, b);
 }
 
-def test_gcd_lcm(x, y : int) {
+def test_gcd_lcm(x : int, y : int) {
   print(x);
   print(y);
   print(gcd(x, y));

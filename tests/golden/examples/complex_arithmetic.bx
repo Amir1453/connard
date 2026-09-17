@@ -1,7 +1,7 @@
 // Test complex arithmetic expressions
 extern def print(n : int);
 
-def evaluate_complex(a, b, c : int) : int {
+def evaluate_complex(a : int, b : int, c : int) : int {
   var result = (a + b) * c - (a - b) / 2 : int;
   return result;
 }

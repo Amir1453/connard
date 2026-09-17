@@ -82,4 +82,8 @@ impl CompilerOptions {
             cfg_instrumentation_options,
         }
     }
+
+    pub fn cu_is_empty(&self) -> bool {
+        self.compilation_units.is_empty()
+    }
 }

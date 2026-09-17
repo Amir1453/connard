@@ -6,7 +6,7 @@
 
 extern def print(n : int);
 
-def fizzbuzz(cur, last : int) {
+def fizzbuzz(cur : int, last : int) {
   while (cur <= last) {
     if (cur % 3 == 0) {
       if (cur % 5 == 0) {
