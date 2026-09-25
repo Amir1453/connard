@@ -107,7 +107,7 @@ impl MM {
     }
 
     fn munch_global_variable(&mut self, var: Variable) {
-        for (name, value_expr) in var.names.into_iter().zip(var.values.into_iter()) {
+        for (name, value_expr) in var.names.into_iter().zip(var.values) {
             let value = match *value_expr {
                 Expression::Number(num) => num,
                 Expression::Bool(boo) => boo.into(),
@@ -221,7 +221,7 @@ impl MM {
     fn munch_variable(&mut self, var: Variable) {
         use TACInst::Copi;
 
-        for (name, value_expr) in var.names.into_iter().zip(var.values.into_iter()) {
+        for (name, value_expr) in var.names.into_iter().zip(var.values) {
             let fresh = self.fresh_temp();
             self.current_vars_insert(name, fresh.clone());
 

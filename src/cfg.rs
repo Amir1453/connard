@@ -416,7 +416,7 @@ impl BasicBlock {
 
 impl fmt::Display for BasicBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", &self.block_label)?;
+        writeln!(f, "{}", self.block_label)?;
         for inst in &self.instructions {
             writeln!(f, "{}", inst)?;
         }
