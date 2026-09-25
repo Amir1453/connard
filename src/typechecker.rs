@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::iter::zip;
 
 use crate::ast::*;
-use crate::types::{Name, ProcType, Span, Stack, Type};
+use crate::types::{ErrorAggregate, Name, ProcType, Span, Stack, Type};
 
 // #[derive(Clone, PartialEq)]
 pub struct TypeChecker {
     scopes: Stack<HashMap<Name, SemanticType>>,
     current_proc_name: Name,
-    errors: Vec<TypeError>,
+    errors: ErrorAggregate<TypeErrorType>,
 }
 
 impl TypeChecker {
@@ -16,21 +16,18 @@ impl TypeChecker {
         Self {
             scopes: Stack::new(),
             current_proc_name: Name::with_capacity(50),
-            errors: Vec::new(),
+            errors: ErrorAggregate::new(),
         }
     }
 
     pub fn check(
         program: &mut Program,
         global_decls: HashMap<Name, SemanticType>,
-    ) -> Option<Vec<TypeError>> {
+    ) -> Result<(), ErrorAggregate<TypeErrorType>> {
         let mut tc = TypeChecker::new();
         tc.scopes.push(global_decls);
         tc.check_program(program);
-        match tc.errors.is_empty() {
-            true => None,
-            false => Some(tc.errors),
-        }
+        tc.errors.resolve()
     }
 
     fn check_program(&mut self, program: &mut Program) {
@@ -65,7 +62,7 @@ impl TypeChecker {
         for (_, expr) in zip(&var.names, &mut var.values) {
             let value_type = expr.get_type();
             if value_type != var_type {
-                self.insert_error(TypeErrorType::TypeMismatchGlobalDecl, None);
+                self.collect_error(TypeErrorType::TypeMismatchGlobalDecl, None);
             }
 
             // self.current_scope_insert_simple(name.clone(), value_type);
@@ -92,7 +89,7 @@ impl TypeChecker {
                 self.check_expression(value);
                 let value_type = value.get_type();
                 if self.find_simple_type(name) != value_type {
-                    self.insert_error(TypeErrorType::TypeMismatchAssign, None);
+                    self.collect_error(TypeErrorType::TypeMismatchAssign, None);
                 }
             }
 
@@ -105,10 +102,10 @@ impl TypeChecker {
                             self.check_expression(exp);
                             let ty = exp.get_type();
                             if ty != expected {
-                                self.insert_error(TypeErrorType::ReturnTypeMismatch, None);
+                                self.collect_error(TypeErrorType::ReturnTypeMismatch, None);
                             }
                         } else {
-                            self.insert_error(TypeErrorType::ReturnValueMissing, None);
+                            self.collect_error(TypeErrorType::ReturnValueMissing, None);
                         }
                     }
 
@@ -117,7 +114,7 @@ impl TypeChecker {
                             self.check_expression(exp);
                             let ty = exp.get_type();
                             if ty != Type::Void {
-                                self.insert_error(TypeErrorType::ReturnTypeMismatchSub, None);
+                                self.collect_error(TypeErrorType::ReturnTypeMismatchSub, None);
                             }
                         }
                     }
@@ -131,7 +128,7 @@ impl TypeChecker {
             } => {
                 self.check_expression(condition);
                 if condition.get_type() != Type::Bool {
-                    self.insert_error(TypeErrorType::ConditionNotBool, None);
+                    self.collect_error(TypeErrorType::ConditionNotBool, None);
                 }
 
                 self.check_block(then_block);
@@ -144,7 +141,7 @@ impl TypeChecker {
             Statement::While { condition, block } => {
                 self.check_expression(condition);
                 if condition.get_type() != Type::Bool {
-                    self.insert_error(TypeErrorType::ConditionNotBool, None);
+                    self.collect_error(TypeErrorType::ConditionNotBool, None);
                 }
 
                 self.check_block(block);
@@ -160,7 +157,7 @@ impl TypeChecker {
             self.check_expression(expr);
             let value_type = expr.get_type();
             if value_type != var_type {
-                self.insert_error(TypeErrorType::TypeMismatchDecl, None);
+                self.collect_error(TypeErrorType::TypeMismatchDecl, None);
             }
 
             self.current_scope_insert_simple(name.clone(), value_type);
@@ -183,7 +180,7 @@ impl TypeChecker {
                 match operator {
                     Operator::Neg => {
                         if value_type != Type::Int {
-                            self.insert_error(TypeErrorType::OpNegMismatch, None);
+                            self.collect_error(TypeErrorType::OpNegMismatch, None);
                             *ty = Some(Type::Error);
                         } else {
                             *ty = Some(Type::Int);
@@ -192,7 +189,7 @@ impl TypeChecker {
 
                     Operator::Tilde => {
                         if value_type != Type::Int {
-                            self.insert_error(TypeErrorType::OpTildeMismatch, None);
+                            self.collect_error(TypeErrorType::OpTildeMismatch, None);
                             *ty = Some(Type::Error);
                         } else {
                             *ty = Some(Type::Int);
@@ -201,7 +198,7 @@ impl TypeChecker {
 
                     Operator::LNot => {
                         if value_type != Type::Bool {
-                            self.insert_error(TypeErrorType::OpLNotMismatch, None);
+                            self.collect_error(TypeErrorType::OpLNotMismatch, None);
                             *ty = Some(Type::Error);
                         } else {
                             *ty = Some(Type::Bool);
@@ -228,7 +225,7 @@ impl TypeChecker {
                         if lhs_type == Type::Int && rhs_type == Type::Int {
                             Some(Type::Int)
                         } else {
-                            self.insert_error(TypeErrorType::OpArithMismatch, None);
+                            self.collect_error(TypeErrorType::OpArithMismatch, None);
                             Some(Type::Error)
                         }
                     }
@@ -237,7 +234,7 @@ impl TypeChecker {
                         if lhs_type == Type::Int && rhs_type == Type::Int {
                             Some(Type::Int)
                         } else {
-                            self.insert_error(TypeErrorType::OpBitwiseMismatch, None);
+                            self.collect_error(TypeErrorType::OpBitwiseMismatch, None);
                             Some(Type::Error)
                         }
                     }
@@ -246,7 +243,7 @@ impl TypeChecker {
                         if lhs_type == Type::Int && rhs_type == Type::Int {
                             Some(Type::Bool)
                         } else {
-                            self.insert_error(TypeErrorType::OpCompareMismatch, None);
+                            self.collect_error(TypeErrorType::OpCompareMismatch, None);
                             Some(Type::Error)
                         }
                     }
@@ -255,7 +252,7 @@ impl TypeChecker {
                         if lhs_type == Type::Bool && rhs_type == Type::Bool {
                             Some(Type::Bool)
                         } else {
-                            self.insert_error(TypeErrorType::OpLogicalMismatch, None);
+                            self.collect_error(TypeErrorType::OpLogicalMismatch, None);
                             Some(Type::Error)
                         }
                     }
@@ -274,7 +271,7 @@ impl TypeChecker {
                     self.check_expression(arg);
                     let arg_type = arg.get_type();
                     if arg_type != Type::Int && arg_type != Type::Bool {
-                        self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                        self.collect_error(TypeErrorType::TypeMismatchProcArgument, None);
                     }
                 } else {
                     let proc_type = self.find_proc_type(proc_name);
@@ -289,7 +286,7 @@ impl TypeChecker {
                             self.check_expression(arg);
                             let arg_type = arg.get_type();
                             if arg_type != *expected_ty {
-                                self.insert_error(TypeErrorType::TypeMismatchProcArgument, None);
+                                self.collect_error(TypeErrorType::TypeMismatchProcArgument, None);
                             }
                         }
                     }
@@ -350,8 +347,8 @@ impl TypeChecker {
 
     // Error helper
 
-    fn insert_error(&mut self, error_type: TypeErrorType, _span: Option<Span>) {
-        self.errors.push(TypeError::new(error_type));
+    fn collect_error(&mut self, error_type: TypeErrorType, _span: Option<Span>) {
+        self.errors.add_error(error_type);
     }
 }
 
@@ -363,39 +360,39 @@ pub enum SemanticType {
 
 // Type Errors
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TypeError {
-    error_type: TypeErrorType,
-    span: Option<Span>,
-}
-
-impl TypeError {
-    pub fn new(error_type: TypeErrorType) -> Self {
-        Self {
-            error_type,
-            span: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum TypeErrorType {
+    #[error("Type mismatch in declaration")]
     TypeMismatchDecl,
+    #[error("Type mismatch in global declaration")]
     TypeMismatchGlobalDecl,
+    #[error("Type mismatch in assignment")]
     TypeMismatchAssign,
+    #[error("Type mismatch in procedure argument")]
     TypeMismatchProcArgument,
 
+    #[error("Condition is not boolean")]
     ConditionNotBool,
 
+    #[error("Wrong type used with -")]
     OpNegMismatch,
+    #[error("Wrong type used with ~")]
     OpTildeMismatch,
+    #[error("Wrong type used with !")]
     OpLNotMismatch,
+    #[error("Wrong type used with arithmetics")]
     OpArithMismatch,
+    #[error("Wrong type used with bitwise")]
     OpBitwiseMismatch,
+    #[error("Wrong type used with comparasion")]
     OpCompareMismatch,
+    #[error("Wrong type used with negation")]
     OpLogicalMismatch,
 
+    #[error("Return value is missing")]
     ReturnValueMissing,
+    #[error("Return type is mismatching")]
     ReturnTypeMismatch,
+    #[error("Idk")]
     ReturnTypeMismatchSub,
 }

@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::iter::zip;
 
 use crate::ast::*;
-use crate::types::{Name, Span, Stack};
+use crate::types::{ErrorAggregate, Name, Span, Stack};
 
 pub struct SemChecker {
     scopes: Stack<HashSet<Name>>,
-    errors: Vec<SyntaxError>,
+    errors: ErrorAggregate<SyntaxErrorType>,
     loop_depth: usize,
 }
 
@@ -14,21 +14,21 @@ impl SemChecker {
     fn new() -> Self {
         Self {
             scopes: Stack::new(),
-            errors: Vec::new(),
+            errors: ErrorAggregate::new(),
             loop_depth: 0,
         }
     }
 
-    pub fn check(program: &Program, global_decls: HashSet<Name>) -> Option<Vec<SyntaxError>> {
+    pub fn check(
+        program: &Program,
+        global_decls: HashSet<Name>,
+    ) -> Result<(), ErrorAggregate<SyntaxErrorType>> {
         let mut sc = SemChecker::new();
         sc.scopes.push(global_decls);
         sc.current_scope_insert(Name::from("print"));
 
         sc.check_program(program);
-        match sc.errors.is_empty() {
-            true => None,
-            false => Some(sc.errors),
-        }
+        sc.errors.resolve()
     }
 
     fn check_program(&mut self, program: &Program) {
@@ -113,7 +113,7 @@ impl SemChecker {
 
             Statement::Jump(_) => {
                 if self.loop_depth == 0 {
-                    self.insert_error(SyntaxErrorType::JumpOutsideLoop, None);
+                    self.collect_error(SyntaxErrorType::JumpOutsideLoop, None);
                 }
             }
         }
@@ -165,13 +165,13 @@ impl SemChecker {
         match expr {
             Expression::Number(_) | Expression::Bool(_) => {}
 
-            _ => self.insert_error(SyntaxErrorType::NonConstantExpression, None),
+            _ => self.collect_error(SyntaxErrorType::NonConstantExpression, None),
         }
     }
 
     fn check_non_declared(&mut self, name: &Name) {
         if self.current_scope_contains(name) {
-            self.insert_error(SyntaxErrorType::DuplicateVariable, None);
+            self.collect_error(SyntaxErrorType::DuplicateVariable, None);
         } else {
             self.current_scope_insert(name.clone());
         }
@@ -179,7 +179,7 @@ impl SemChecker {
 
     fn check_declared(&mut self, name: &Name) {
         if !(self.any_scope_contains(name)) {
-            self.insert_error(SyntaxErrorType::MissingVariable, None);
+            self.collect_error(SyntaxErrorType::MissingVariable, None);
         }
     }
 
@@ -206,33 +206,22 @@ impl SemChecker {
 
     // Error helper
 
-    fn insert_error(&mut self, error_type: SyntaxErrorType, _span: Option<Span>) {
-        self.errors.push(SyntaxError::new(error_type));
+    fn collect_error(&mut self, error_type: SyntaxErrorType, _span: Option<Span>) {
+        self.errors.add_error(error_type);
     }
 }
 
 // Syntax Errors
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct SyntaxError {
-    error_type: SyntaxErrorType,
-    span: Option<Span>,
-}
-
-impl SyntaxError {
-    pub fn new(error_type: SyntaxErrorType) -> Self {
-        Self {
-            error_type,
-            span: None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
 pub enum SyntaxErrorType {
+    #[error("Duplicate variable")]
     DuplicateVariable,
+    #[error("Missing variable")]
     MissingVariable,
+    #[error("Non-constant expression")]
     NonConstantExpression,
+    #[error("Jump outside of loop")]
     JumpOutsideLoop,
     // NotYetImplemented,
 }

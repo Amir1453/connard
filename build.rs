@@ -126,7 +126,7 @@ fn generate_regression_tests() -> Result<(), std::io::Error> {
 fn regression_{stem}() {{
     let p = PathBuf::from("{p}");
     let asm_path = PathBuf::from("{asm_path}");
-    let _ = Driver::drive(&p, &asm_path);
+    Driver::drive(&p, &asm_path).unwrap();
 }}
 "#,
             p = p.display(),

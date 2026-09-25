@@ -49,6 +49,9 @@ pub struct CompilerOptions {
     pub warning_options: Vec<WarningOptions>,
     #[allow(dead_code)]
     pub cfg_instrumentation_options: Vec<CFGInstrumentationOptions>,
+
+    // Optional, to trigger single file mode
+    pub out_path: Option<PathBuf>,
 }
 
 impl CompilerOptions {
@@ -80,6 +83,16 @@ impl CompilerOptions {
             compilation_units,
             warning_options,
             cfg_instrumentation_options,
+            out_path: None,
+        }
+    }
+
+    pub fn from_singular(cu: &PathBuf, out_path: &PathBuf) -> Self {
+        Self {
+            compilation_units: vec![cu.to_path_buf()],
+            warning_options: Vec::new(),
+            cfg_instrumentation_options: Vec::new(),
+            out_path: Some(out_path.to_path_buf()),
         }
     }
 

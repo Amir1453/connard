@@ -1,4 +1,9 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    path::PathBuf,
+};
+
+use anyhow::{Context, bail};
 
 use crate::{
     asm::Asm,
@@ -16,19 +21,28 @@ use crate::{
 pub struct Driver {}
 
 impl Driver {
-    pub fn cli() -> Result<(), Box<dyn std::error::Error>> {
+    pub fn cli() -> anyhow::Result<()> {
         let options = CompilerOptions::from_env();
 
         if options.cu_is_empty() {
-            println!("Maybe specify some files !");
-            return Ok(());
+            bail!("no input files")
         }
 
+        Driver::compile(options)
+    }
+
+    pub fn drive(cu: &PathBuf, out_path: &PathBuf) -> anyhow::Result<()> {
+        let options = CompilerOptions::from_singular(cu, out_path);
+
+        Driver::compile(options)
+    }
+
+    fn compile(options: CompilerOptions) -> anyhow::Result<()> {
+        // Generate the parser
         let parser = bxgrammar::BXParser::new();
 
-        let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
+        // Accumulate compilation unit programs
         let mut cu_programs: Vec<(PathBuf, Program)> = Vec::new();
-
         for cu in options.compilation_units.into_iter() {
             let cu_source_code = std::fs::read_to_string(&cu)?;
             let cu_lexer = Lexer::new(&cu_source_code);
@@ -37,19 +51,26 @@ impl Driver {
             cu_programs.push((cu, cu_program));
         }
 
-        for (_, cu_program) in cu_programs.iter() {
-            for decl in cu_program.0.iter() {
+        let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
+
+        let mut insert_global_decl = |name: Name, ty: SemanticType| match global_decls.entry(name) {
+            Entry::Vacant(entry) => {
+                entry.insert(ty);
+                Ok(())
+            }
+            Entry::Occupied(entry) => {
+                bail!("duplicate global declaration: {}", entry.key())
+            }
+        };
+
+        for (_, cu_program) in &cu_programs {
+            for decl in &cu_program.0 {
                 match decl {
                     Declaration::Variable(variable) => {
                         let var = variable.as_ref();
-                        for name in var.names.clone().into_iter() {
-                            if global_decls.contains_key(&name) {
-                                return Err(
-                                    format!("Duplicate Global Declaration: {}", &name).into()
-                                );
-                            }
 
-                            global_decls.insert(name, SemanticType::SimpleType(var.ty));
+                        for name in var.names.clone().into_iter() {
+                            insert_global_decl(name, SemanticType::SimpleType(var.ty))?
                         }
                     }
 
@@ -59,50 +80,48 @@ impl Driver {
                         return_type,
                         ..
                     } => {
-                        if global_decls.contains_key(proc_name) {
-                            return Err(
-                                format!("Duplicate Global Declaration: {}", &proc_name).into()
-                            );
-                        }
-
-                        global_decls.insert(
-                            proc_name.clone(),
-                            SemanticType::ProcType(ProcType {
-                                args_type: proc_args.clone(),
-                                return_type: *return_type,
-                            }),
-                        );
+                        let ty = SemanticType::ProcType(ProcType {
+                            args_type: proc_args.clone(),
+                            return_type: *return_type,
+                        });
+                        insert_global_decl(proc_name.clone(), ty)?
                     }
                 }
             }
         }
 
+        // Making sure a main function exists
         if !(global_decls.contains_key("main")
             && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
         {
-            panic!()
+            bail!("No main() ! Maybe I am a linker ?")
+        }
+
+        // Handling the case for Driver::drive()
+        if let Some(out_path) = options.out_path {
+            let (_cu, mut cu_program) = cu_programs
+                .into_iter()
+                .next()
+                .context("Program List Empty!")?;
+
+            SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
+            TypeChecker::check(&mut cu_program, global_decls.clone())?;
+
+            let cutac = MM::munch(cu_program);
+            std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
+
+            // let optimized_cutac = Optimizer::optimize(cutac);
+            // let asm = Asm::lower(optimized_cutac);
+            let asm = Asm::lower(cutac);
+            std::fs::write(out_path, &asm)?;
+
+            return Ok(());
         }
 
         for (cu, mut cu_program) in cu_programs.into_iter() {
-            match SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
-                Some(err) => {
-                    for error in err {
-                        println!("{}: {:?}", cu.display(), error);
-                    }
-                    panic!()
-                }
-                None => println!("Semantic Check successful @ {}!", cu.display()),
-            }
+            SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
 
-            match TypeChecker::check(&mut cu_program, global_decls.clone()) {
-                Some(err) => {
-                    for error in err {
-                        println!("{}: {:?}", cu.display(), error);
-                    }
-                    panic!()
-                }
-                None => println!("Type Check successful @ {}!", cu.display()),
-            }
+            TypeChecker::check(&mut cu_program, global_decls.clone())?;
 
             // println!("Munching {}...", cu);
             let cutac = MM::munch(cu_program);
@@ -117,89 +136,13 @@ impl Driver {
             let stem = cu
                 .file_stem()
                 .and_then(|s| s.to_str())
-                .expect("failed to get file stem");
+                .context("failed to get file stem")?;
             let mut out_path = PathBuf::from(stem);
             out_path.set_extension("s");
 
             std::fs::write(out_path, &asm)?;
             println!("{}", asm);
         }
-
-        Ok(())
-    }
-
-    pub fn drive(cu: &PathBuf, out_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        let parser = bxgrammar::BXParser::new();
-
-        let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
-
-        let cu_source_code = std::fs::read_to_string(cu)?;
-        let cu_lexer = Lexer::new(&cu_source_code);
-        let mut cu_program = parser.parse(cu_lexer).unwrap();
-
-        for decl in cu_program.0.iter() {
-            match decl {
-                Declaration::Variable(variable) => {
-                    let var = variable.as_ref();
-                    for name in var.names.clone().into_iter() {
-                        if global_decls.contains_key(&name) {
-                            panic!("Duplicate Global Declaration !");
-                            // return Err(format!("Duplicate Global Declaration: {}", &name).into());
-                        }
-
-                        global_decls.insert(name, SemanticType::SimpleType(var.ty));
-                    }
-                }
-
-                Declaration::Proc {
-                    proc_name,
-                    proc_args,
-                    return_type,
-                    ..
-                } => {
-                    if global_decls.contains_key(proc_name) {
-                        panic!("Duplicate Global Declaration !");
-                        // return Err(format!("Duplicate Global Declaration: {}", &proc_name).into());
-                    }
-
-                    global_decls.insert(
-                        proc_name.clone(),
-                        SemanticType::ProcType(ProcType {
-                            args_type: proc_args.clone(),
-                            return_type: *return_type,
-                        }),
-                    );
-                }
-            }
-        }
-
-        if !(global_decls.contains_key("main")
-            && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
-        {
-            panic!()
-        }
-
-        if let Some(err) = SemChecker::check(&cu_program, global_decls.keys().cloned().collect()) {
-            for error in err {
-                println!("{}: {:?}", cu.display(), error);
-            }
-            panic!()
-        }
-
-        if let Some(err) = TypeChecker::check(&mut cu_program, global_decls.clone()) {
-            for error in err {
-                println!("{}: {:?}", cu.display(), error);
-            }
-            panic!()
-        }
-
-        let cutac = MM::munch(cu_program);
-        std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
-
-        // let optimized_cutac = Optimizer::optimize(cutac);
-        // let asm = Asm::lower(optimized_cutac);
-        let asm = Asm::lower(cutac);
-        std::fs::write(out_path, &asm)?;
 
         Ok(())
     }
