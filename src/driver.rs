@@ -11,7 +11,7 @@ use crate::{
     bxgrammar,
     lexer::Lexer,
     mm::MM,
-    // optimizer::Optimizer,
+    optimizer::Optimizer,
     options::CompilerOptions,
     semchecker::SemChecker,
     typechecker::{SemanticType, TypeChecker},
@@ -120,7 +120,6 @@ impl Driver {
 
         for (cu, mut cu_program) in cu_programs.into_iter() {
             SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
-
             TypeChecker::check(&mut cu_program, global_decls.clone())?;
 
             // println!("Munching {}...", cu);
@@ -128,7 +127,7 @@ impl Driver {
             println!("{}", cutac);
 
             // println!("Optimizing {}...", cu);
-            // let optimized_cutac = Optimizer::optimize(cutac);
+            let cutac = Optimizer::optimize(cutac);
 
             // let asm = Asm::lower(optimized_cutac);
             let asm = Asm::lower(cutac);

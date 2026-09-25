@@ -1,9 +1,13 @@
 #![allow(dead_code)]
 
 use core::fmt;
-use std::{collections::HashMap, fmt::Debug};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+};
 
-// use compact_str::CompactString;
+use compact_str::CompactString;
+
 use petgraph::{
     Direction,
     graph::NodeIndex,
@@ -12,23 +16,30 @@ use petgraph::{
 };
 
 use crate::{
-    tac::{Label, TACInst},
-    // types::{InstBlock, Name},
-    types::InstBlock,
+    tac::{Label, ProcDecl, TACInst},
+    types::{InstBlock, Name},
 };
 
 pub struct CFG {
     pub graph: StableGraph<BasicBlock, TACInst>,
-    // label_to_index: HashMap<Label, NodeIndex>,
+    name: Name,
+    arguments: Option<Vec<Name>>,
 }
 
 impl CFG {
-    pub fn serialize_tac(&mut self) -> InstBlock {
+    pub fn serialize_tac(mut self) -> ProcDecl {
         let mut schedule: InstBlock = Vec::new();
         let mut schedule_order: Vec<NodeIndex> = Vec::with_capacity(self.graph.node_count());
 
+        let name = self.name;
+        let arguments = self.arguments;
+
         let Some(entry) = self.graph.node_indices().next() else {
-            return schedule;
+            return ProcDecl {
+                name,
+                arguments,
+                instructions: schedule,
+            };
         };
 
         let mut bfs = Bfs::new(&self.graph, entry);
@@ -50,7 +61,11 @@ impl CFG {
 
         self.graph.clear();
 
-        schedule
+        ProcDecl {
+            name,
+            arguments,
+            instructions: schedule,
+        }
     }
 
     pub fn remove_unreachable(&mut self) {
@@ -187,22 +202,25 @@ impl From<BasicBlocks> for CFG {
 
         Self {
             graph,
-            // label_to_index,
+            name: value.proc_name,
+            arguments: value.arguments,
         }
     }
 }
 
 pub struct BasicBlocks {
     pub blocks: Vec<BasicBlock>,
-    // proc_name: Name,
     block_index: i64,
+    proc_name: Name,
+    arguments: Option<Vec<Name>>,
 }
 
 impl BasicBlocks {
     fn empty() -> Self {
         Self {
             blocks: Vec::new(),
-            // proc_name: CompactString::new(""),
+            proc_name: CompactString::new(""),
+            arguments: None,
             block_index: -1,
         }
     }
@@ -218,9 +236,11 @@ impl BasicBlocks {
     }
 }
 
-impl From<InstBlock> for BasicBlocks {
-    fn from(instructions: InstBlock) -> Self {
+impl From<ProcDecl> for BasicBlocks {
+    fn from(proc: ProcDecl) -> Self {
         use TACInst::*;
+
+        let instructions = proc.instructions;
 
         // A way to get fresh labels
         let mut counter: i64 = 0;
@@ -238,13 +258,13 @@ impl From<InstBlock> for BasicBlocks {
         match first_inst {
             Some(LabelDecl(label)) => basic_blocks.push_block(label),
             Some(inst) => {
-                basic_blocks.push_block(Label::Named("Entry".into()));
+                let title = format!("{}_entry", proc.name).into();
+                basic_blocks.push_block(Label::Named(title));
                 basic_blocks.push_instruction_last_block(inst);
             }
             None => return basic_blocks,
         }
 
-        // while i < instructions.len() {
         while let Some(instruction) = inst_iter.next() {
             let next_instruction = inst_iter.peek();
 
@@ -305,89 +325,8 @@ impl From<InstBlock> for BasicBlocks {
             }
         }
 
-        basic_blocks
-    }
-}
-
-impl From<&InstBlock> for BasicBlocks {
-    fn from(instructions: &InstBlock) -> Self {
-        use TACInst::*;
-
-        // A way to get fresh labels
-        let mut counter: i64 = 0;
-        let mut fresh_label = || -> Label {
-            counter += 1;
-            Label::Named(format!("B{}", counter).into())
-        };
-
-        let mut basic_blocks: BasicBlocks = BasicBlocks::empty();
-
-        // Add a label before the first instruction if needed
-        let mut i = 0;
-        if let Some(LabelDecl(label)) = instructions.first() {
-            basic_blocks.push_block(label.clone());
-            i += 1;
-        } else {
-            basic_blocks.push_block(Label::Named("Entry".into()));
-        }
-
-        while i < instructions.len() {
-            let instruction = &instructions[i];
-            let next_instruction = instructions.get(i + 1);
-
-            match (instruction, next_instruction) {
-                (UnconditionalJump(_) | Return(_), Some(LabelDecl(label))) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                    basic_blocks.push_block(label.clone());
-                    i += 1;
-                }
-
-                (UnconditionalJump(_) | Return(_), None) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                }
-
-                (UnconditionalJump(_) | Return(_), _) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                    basic_blocks.push_block(fresh_label());
-                }
-
-                (ConditionalJump { .. }, Some(UnconditionalJump(_)) | Some(Return(_))) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                }
-
-                (ConditionalJump { .. }, Some(LabelDecl(label))) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                    basic_blocks.push_instruction_last_block(UnconditionalJump(label.clone()));
-                    basic_blocks.push_block(label.clone());
-                    i += 1;
-                }
-
-                (ConditionalJump { .. }, Some(_)) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                    let new_label = fresh_label();
-                    basic_blocks.push_instruction_last_block(UnconditionalJump(new_label.clone()));
-                    basic_blocks.push_block(new_label);
-                }
-
-                (LabelDecl(label), _) => {
-                    basic_blocks.push_block(label.clone());
-                }
-
-                (_, Some(LabelDecl(label))) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                    basic_blocks.push_instruction_last_block(UnconditionalJump(label.clone()));
-                    basic_blocks.push_block(label.clone());
-                    i += 1;
-                }
-
-                (_, _) => {
-                    basic_blocks.push_instruction_last_block(instruction.clone());
-                }
-            }
-
-            i += 1;
-        }
-
+        basic_blocks.proc_name = proc.name;
+        basic_blocks.arguments = proc.arguments;
         basic_blocks
     }
 }

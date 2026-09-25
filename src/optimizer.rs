@@ -15,14 +15,14 @@ impl Optimizer {
         let mut optimized_cutac: CUTAC = CUTAC(Vec::with_capacity(cutac.len()));
 
         for decl in cutac.0.into_iter() {
-            if let ProcDecl(mut proc) = decl {
-                let mut cfg = CFG::from(BasicBlocks::from(proc.instructions));
+            if let ProcDecl(proc) = decl {
+                let mut cfg = CFG::from(BasicBlocks::from(proc));
 
                 cfg.remove_unreachable();
                 cfg.coalesce_blocks();
                 cfg.jump_threading();
 
-                proc.instructions = cfg.serialize_tac();
+                let proc = cfg.serialize_tac();
 
                 optimized_cutac.push(ProcDecl(proc));
             } else {
