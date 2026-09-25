@@ -14,12 +14,14 @@ static CARGO_MANIFEST_DIR: LazyLock<PathBuf> =
 static TMP_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| CARGO_MANIFEST_DIR.join("target").join("e2e_artifacts"));
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("cargo::rerun-if-changed=src/bxgrammar.lalrpop");
     println!("cargo::rerun-if-changed=tests/golden");
 
-    lalrpop::process_root().unwrap();
-    generate_tests().unwrap();
+    lalrpop::process_root()?;
+    generate_tests()?;
+
+    Ok(())
 }
 
 fn generate_tests() -> Result<(), std::io::Error> {
@@ -41,8 +43,8 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 
     let mut src = String::new();
 
-    for entry in fs::read_dir(&test_dir)?.filter_map(Result::ok) {
-        let p = entry.path();
+    for entry in fs::read_dir(&test_dir)? {
+        let p = entry?.path();
 
         if p.extension().and_then(|s| s.to_str()) != Some("bx") {
             continue;
@@ -109,8 +111,8 @@ fn generate_regression_tests() -> Result<(), std::io::Error> {
 
     let mut src = String::new();
 
-    for entry in fs::read_dir(&test_dir).unwrap().filter_map(Result::ok) {
-        let p = entry.path();
+    for entry in fs::read_dir(&test_dir)? {
+        let p = entry?.path();
 
         if p.extension().and_then(|s| s.to_str()) != Some("bx") {
             continue;
