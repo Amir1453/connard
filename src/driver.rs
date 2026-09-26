@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use anyhow::{Context, bail};
 
 use crate::frontend::ast::{Declaration, Program};
-use crate::frontend::{BXParser, Lexer, MM, SemChecker, TypeChecker};
+use crate::frontend::{BXParser, Lexer, SemChecker, TypeChecker};
+
+use crate::ir::MM;
 
 use crate::optimizer::Optimizer;
 
