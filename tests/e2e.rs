@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use bx_compiler::driver::Driver;
+use connard::driver::Driver;
 
 include!(concat!(env!("OUT_DIR"), "/gen_tests.rs"));
 include!(concat!(env!("OUT_DIR"), "/reg_tests.rs"));

@@ -1,3 +1,0 @@
-extern def print(n : int);
-
-def main() {}

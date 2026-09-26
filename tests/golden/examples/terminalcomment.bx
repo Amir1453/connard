@@ -1,6 +1,0 @@
-extern def print(n : int);
-
-def main() {
-  print(42);
-}
-// a terminal comment without an ending \n

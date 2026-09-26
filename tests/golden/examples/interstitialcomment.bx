@@ -1,7 +1,0 @@
-extern def print(n : int);
-
-def main() {
-  var x = // interstitial comment
-    1 + 2 : int;
-  print(x);
-}

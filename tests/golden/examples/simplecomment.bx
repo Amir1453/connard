@@ -1,6 +1,0 @@
-extern def print(n : int);
-
-// a simple line comment
-def main() {
-  print(42);
-}

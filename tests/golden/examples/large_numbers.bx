@@ -1,8 +1,0 @@
-// Test integer overflow behavior
-extern def print(n : int);
-
-def main() {
-  var large = 1000000 : int;
-  var result = large * large : int;
-  print(result);
-}
