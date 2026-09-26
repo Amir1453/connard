@@ -1,6 +1,0 @@
-// main with wrong signature (has parameters)
-extern def print(n : int);
-
-def main(x : int) {
-  print(x);
-}
