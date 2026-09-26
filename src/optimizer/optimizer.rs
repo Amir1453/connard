@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
+use crate::ir::BasicBlocks;
 use crate::ir::tac::{CUTAC, TACDeclaration};
-use crate::optimizer::cfg::{BasicBlocks, CFG};
+use crate::optimizer::cfg::CFG;
 
-pub struct Optimizer {
-    // cfg: CFG,
-}
+pub struct Optimizer {}
 
 impl Optimizer {
     pub fn optimize(cutac: CUTAC) -> CUTAC {

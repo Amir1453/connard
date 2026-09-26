@@ -104,11 +104,18 @@ impl Driver {
             SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
             TypeChecker::check(&mut cu_program, global_decls.clone())?;
 
+            // use crate::ir::mm_llvm;
+            // use inkwell::context;
+            //
+            // let context = context::Context::create();
+            // let module = context.create_module("test");
+            // let _ = mm_llvm::MMLLVM::munch(&context, module, cu_program, global_decls)?;
+
             let cutac = MM::munch(cu_program);
+            let cutac = Optimizer::optimize(cutac);
             std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
 
-            // let optimized_cutac = Optimizer::optimize(cutac);
-            // let asm = Asm::lower(optimized_cutac);
+
             let asm = Asm::lower(cutac);
             std::fs::write(out_path, &asm)?;
 
@@ -121,13 +128,12 @@ impl Driver {
 
             // println!("Munching {}...", cu);
             let cutac = MM::munch(cu_program);
-            println!("{}", cutac);
-
-            // println!("Optimizing {}...", cu);
             let cutac = Optimizer::optimize(cutac);
+            println!("{}", cutac);
 
             // let asm = Asm::lower(optimized_cutac);
             let asm = Asm::lower(cutac);
+            // println!("{}", asm);
 
             let stem = cu
                 .file_stem()
@@ -137,7 +143,6 @@ impl Driver {
             out_path.set_extension("s");
 
             std::fs::write(out_path, &asm)?;
-            println!("{}", asm);
         }
 
         Ok(())

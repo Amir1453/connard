@@ -1,9 +1,9 @@
+use std::collections::HashMap;
+
 use crate::frontend::ast::*;
 use crate::ir::tac::*;
 
 use crate::types::{InstBlock, Name, Stack, Type};
-
-use std::collections::HashMap;
 
 pub struct MM {
     cutac: CUTAC,

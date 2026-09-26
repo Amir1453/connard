@@ -1,11 +1,4 @@
-#![allow(dead_code)]
-
-use std::{
-    collections::HashMap,
-    fmt::{self, Debug},
-};
-
-use compact_str::CompactString;
+use std::collections::HashMap;
 
 use petgraph::{
     Direction,
@@ -15,6 +8,7 @@ use petgraph::{
 };
 
 use crate::ir::tac::{Label, ProcDecl, TACInst};
+use crate::ir::{BasicBlock, BasicBlocks};
 use crate::types::{InstBlock, Name};
 
 pub struct CFG {
@@ -202,166 +196,5 @@ impl From<BasicBlocks> for CFG {
             name: value.proc_name,
             arguments: value.arguments,
         }
-    }
-}
-
-pub struct BasicBlocks {
-    pub blocks: Vec<BasicBlock>,
-    block_index: i64,
-    proc_name: Name,
-    arguments: Option<Vec<Name>>,
-}
-
-impl BasicBlocks {
-    fn empty() -> Self {
-        Self {
-            blocks: Vec::new(),
-            proc_name: CompactString::new(""),
-            arguments: None,
-            block_index: -1,
-        }
-    }
-
-    fn push_block(&mut self, block_label: Label) {
-        self.blocks.push(BasicBlock::new(block_label));
-        self.block_index += 1;
-    }
-
-    fn push_instruction_last_block(&mut self, inst: TACInst) {
-        let index: usize = self.block_index.try_into().unwrap_or(0);
-        self.blocks[index].push_instruction(inst);
-    }
-}
-
-impl From<ProcDecl> for BasicBlocks {
-    fn from(proc: ProcDecl) -> Self {
-        use TACInst::*;
-
-        let instructions = proc.instructions;
-
-        // A way to get fresh labels
-        let mut counter: i64 = 0;
-        let mut fresh_label = || -> Label {
-            counter += 1;
-            Label::Named(format!("B{}", counter).into())
-        };
-
-        let mut basic_blocks: BasicBlocks = BasicBlocks::empty();
-
-        // Add a label before the first instruction if needed
-        let mut inst_iter = instructions.into_iter().peekable();
-
-        let first_inst = inst_iter.next();
-        match first_inst {
-            Some(LabelDecl(label)) => basic_blocks.push_block(label),
-            Some(inst) => {
-                let title = format!("{}_entry", proc.name).into();
-                basic_blocks.push_block(Label::Named(title));
-                basic_blocks.push_instruction_last_block(inst);
-            }
-            None => return basic_blocks,
-        }
-
-        while let Some(instruction) = inst_iter.next() {
-            let next_instruction = inst_iter.peek();
-
-            match (&instruction, next_instruction) {
-                (UnconditionalJump(_) | Return(_), Some(LabelDecl(_))) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                    // ENTRY -> THIS IS STUPIDDD
-                    if let Some(LabelDecl(label)) = inst_iter.next() {
-                        basic_blocks.push_block(label);
-                    }
-                }
-
-                (UnconditionalJump(_) | Return(_), None) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                }
-
-                (UnconditionalJump(_) | Return(_), _) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                    basic_blocks.push_block(fresh_label());
-                }
-
-                (ConditionalJump { .. }, Some(UnconditionalJump(_)) | Some(Return(_))) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                }
-
-                (ConditionalJump { .. }, Some(LabelDecl(_))) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                    // ENTRY -> THIS IS STUPIDDD
-                    if let Some(LabelDecl(label)) = inst_iter.next() {
-                        basic_blocks.push_instruction_last_block(UnconditionalJump(label.clone()));
-                        basic_blocks.push_block(label);
-                    }
-                }
-
-                (ConditionalJump { .. }, Some(_)) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                    let new_label = fresh_label();
-                    basic_blocks.push_instruction_last_block(UnconditionalJump(new_label.clone()));
-                    basic_blocks.push_block(new_label);
-                }
-
-                (LabelDecl(label), _) => {
-                    basic_blocks.push_block(label.clone());
-                }
-
-                (_, Some(LabelDecl(_))) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                    // ENTRY -> THIS IS STUPIDDD
-                    if let Some(LabelDecl(label)) = inst_iter.next() {
-                        basic_blocks.push_instruction_last_block(UnconditionalJump(label.clone()));
-                        basic_blocks.push_block(label);
-                    }
-                }
-
-                (_, _) => {
-                    basic_blocks.push_instruction_last_block(instruction);
-                }
-            }
-        }
-
-        basic_blocks.proc_name = proc.name;
-        basic_blocks.arguments = proc.arguments;
-        basic_blocks
-    }
-}
-
-pub struct BasicBlock {
-    block_label: Label,
-    instructions: InstBlock,
-}
-
-impl BasicBlock {
-    pub fn new(block_label: Label) -> Self {
-        Self {
-            block_label,
-            instructions: Vec::new(),
-        }
-    }
-
-    pub fn push_instruction(&mut self, inst: TACInst) {
-        self.instructions.push(inst);
-    }
-
-    fn pop_instruction(&mut self) -> Option<TACInst> {
-        self.instructions.pop()
-    }
-}
-
-impl fmt::Display for BasicBlock {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.block_label)?;
-        for inst in &self.instructions {
-            writeln!(f, "{}", inst)?;
-        }
-        write!(f, "")
-    }
-}
-
-impl Debug for BasicBlock {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
     }
 }
