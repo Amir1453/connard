@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     ast::Operator,
-    types::{InstBlock, Name},
+    types::{InstBlock, Name, Type},
 };
 // use serde::{Serialize, Serializer};
 // use std::{collections::HashMap, sync::LazyLock};
@@ -91,6 +91,21 @@ pub enum TACTemp {
 pub enum Label {
     Numeric(i64),
     Named(Name),
+}
+
+#[derive(Clone, Hash, PartialEq)]
+#[allow(dead_code)]
+pub enum TACType {
+    VOID,
+    LABEL,
+    TOKEN,
+    METADATA,
+
+    I1,
+    I8,
+    I16,
+    I32,
+    I64,
 }
 
 #[derive(Clone, Hash, PartialEq)]
@@ -188,9 +203,9 @@ impl fmt::Display for ProcDecl {
         match &self.arguments {
             Some(args) if !args.is_empty() => {
                 let names: Vec<String> = args.iter().map(|nt| format!("%{}", nt)).collect();
-                writeln!(f, "proc @{}({}):", self.name, names.join(", "))?;
+                writeln!(f, "define @{}({}):", self.name, names.join(", "))?;
             }
-            _ => writeln!(f, "proc @{}():", self.name)?,
+            _ => writeln!(f, "define @{}():", self.name)?,
         }
 
         for inst in &self.instructions {
@@ -287,6 +302,24 @@ impl fmt::Display for Label {
     }
 }
 
+impl From<Option<Type>> for TACType {
+    fn from(value: Option<Type>) -> Self {
+        use TACType::*;
+        use Type::*;
+
+        let Some(ty) = value else {
+            return VOID;
+        };
+
+        match ty {
+            Int => I64,
+            Bool => I1,
+            Void => VOID,
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl From<Operator> for TACJumpOpcode {
     fn from(value: Operator) -> Self {
         use Operator::*;
@@ -298,7 +331,7 @@ impl From<Operator> for TACJumpOpcode {
             LTE => JLE,
             G => JNLE,
             GTE => JNL,
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -310,7 +343,7 @@ impl From<Operator> for TACUnaryOpcode {
         match value {
             Neg => NEG,
             Tilde => NOT,
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -330,8 +363,24 @@ impl From<Operator> for TACBinaryOpcode {
             Caret => XOR,
             LShift => SHL,
             RShift => SHR,
-            _ => todo!(),
+            _ => unreachable!(),
         }
+    }
+}
+
+impl fmt::Display for TACType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::VOID => "void",
+            Self::LABEL => "label",
+            Self::I1 => "i1",
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            _ => todo!(),
+        };
+        write!(f, "{}", s)
     }
 }
 
