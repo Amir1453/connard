@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::iter::zip;
 
-use crate::ast::*;
+use crate::frontend::ast::*;
 use crate::types::{ErrorAggregate, Name, Span, Stack};
 
 pub struct SemChecker {

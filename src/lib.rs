@@ -1,16 +1,8 @@
-mod asm;
-mod ast;
-mod cfg;
-pub mod driver;
-mod lexer;
-mod mm;
+mod backend;
+mod frontend;
+mod ir;
 mod optimizer;
-mod options;
-mod semchecker;
-mod tac;
-mod tokens;
-mod typechecker;
-mod types;
 
-use lalrpop_util::lalrpop_mod;
-lalrpop_mod!(pub bxgrammar);
+pub mod driver;
+mod options;
+mod types;

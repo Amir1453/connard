@@ -1,4 +1,4 @@
-use bx_compiler::driver::Driver;
+use connard::driver::Driver;
 
 fn main() -> anyhow::Result<()> {
     Driver::cli()

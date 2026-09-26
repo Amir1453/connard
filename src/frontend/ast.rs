@@ -17,6 +17,7 @@ pub struct Variable {
     pub names: Vec<Name>,
     pub values: Vec<Box<Expression>>,
     pub ty: Type,
+    #[allow(unused)]
     pub scope: ScopeState,
 }
 

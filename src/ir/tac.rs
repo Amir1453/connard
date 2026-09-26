@@ -3,12 +3,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{
-    ast::Operator,
-    types::{InstBlock, Name, Type},
-};
-// use serde::{Serialize, Serializer};
-// use std::{collections::HashMap, sync::LazyLock};
+use crate::frontend::ast::Operator;
+use crate::types::{InstBlock, Name, Type};
 
 pub struct CUTAC(pub Vec<TACDeclaration>);
 

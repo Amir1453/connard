@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use core::fmt;
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::{self, Debug},
 };
 
 use compact_str::CompactString;
@@ -15,10 +14,8 @@ use petgraph::{
     visit::{Bfs, Dfs, EdgeRef, IntoNodeReferences, VisitMap},
 };
 
-use crate::{
-    tac::{Label, ProcDecl, TACInst},
-    types::{InstBlock, Name},
-};
+use crate::ir::tac::{Label, ProcDecl, TACInst};
+use crate::types::{InstBlock, Name};
 
 pub struct CFG {
     pub graph: StableGraph<BasicBlock, TACInst>,

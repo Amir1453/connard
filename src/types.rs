@@ -1,6 +1,8 @@
-use crate::tac::TACInst;
-use compact_str::CompactString;
 use std::vec;
+
+use compact_str::CompactString;
+
+use crate::ir::tac::TACInst;
 
 pub type Span = (usize, usize);
 
@@ -26,6 +28,12 @@ pub enum Type {
 pub struct ProcType {
     pub args_type: Option<Vec<(Name, Type)>>,
     pub return_type: Option<Type>,
+}
+
+#[derive(Clone)]
+pub enum SemanticType {
+    SimpleType(Type),
+    ProcType(ProcType),
 }
 
 // Scope

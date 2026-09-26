@@ -1,22 +1,17 @@
-use std::{
-    collections::{HashMap, hash_map::Entry},
-    path::PathBuf,
-};
+use std::collections::{HashMap, hash_map::Entry};
+use std::path::PathBuf;
 
 use anyhow::{Context, bail};
 
-use crate::{
-    asm::Asm,
-    ast::{Declaration, Program},
-    bxgrammar,
-    lexer::Lexer,
-    mm::MM,
-    optimizer::Optimizer,
-    options::CompilerOptions,
-    semchecker::SemChecker,
-    typechecker::{SemanticType, TypeChecker},
-    types::{Name, ProcType},
-};
+use crate::frontend::ast::{Declaration, Program};
+use crate::frontend::{BXParser, Lexer, MM, SemChecker, TypeChecker};
+
+use crate::optimizer::Optimizer;
+
+use crate::backend::Asm;
+
+use crate::options::CompilerOptions;
+use crate::types::{Name, ProcType, SemanticType};
 
 pub struct Driver {}
 
@@ -39,7 +34,7 @@ impl Driver {
 
     fn compile(options: CompilerOptions) -> anyhow::Result<()> {
         // Generate the parser
-        let parser = bxgrammar::BXParser::new();
+        let parser = BXParser::new();
 
         // Accumulate compilation unit programs
         let mut cu_programs: Vec<(PathBuf, Program)> = Vec::new();

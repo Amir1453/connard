@@ -63,19 +63,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bx-compiler"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "compact_str",
- "lalrpop",
- "lalrpop-util",
- "logos",
- "petgraph 0.8.3",
- "thiserror",
-]
-
-[[package]]
 name = "castaway"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -102,6 +89,19 @@ dependencies = [
  "rustversion",
  "ryu",
  "static_assertions",
+]
+
+[[package]]
+name = "connard"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "compact_str",
+ "lalrpop",
+ "lalrpop-util",
+ "logos",
+ "petgraph 0.8.3",
+ "thiserror",
 ]
 
 [[package]]

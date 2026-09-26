@@ -1,13 +1,8 @@
 use compact_str::CompactString;
 use std::collections::HashMap;
 
-use crate::{
-    tac::{
-        CUTAC, GlobalVarDecl, Label, ProcDecl, TACBinaryOpcode, TACDeclaration, TACInst,
-        TACJumpOpcode, TACTemp, TACUnaryOpcode,
-    },
-    types::Name,
-};
+use crate::ir::tac::*;
+use crate::types::Name;
 
 pub struct Asm {
     var_asm: Vec<CompactString>,

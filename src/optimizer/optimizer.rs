@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 
-use crate::{
-    cfg::{BasicBlocks, CFG},
-    tac::{CUTAC, TACDeclaration},
-};
+use crate::ir::tac::{CUTAC, TACDeclaration};
+use crate::optimizer::cfg::{BasicBlocks, CFG};
 
 pub struct Optimizer {
     // cfg: CFG,

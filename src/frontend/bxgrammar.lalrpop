@@ -1,6 +1,6 @@
-use crate::tokens::{Token, LexicalError};
+use crate::frontend::ast;
+use crate::frontend::tokens::{Token, LexicalError};
 use crate::types::{Name, Type};
-use crate::ast;
 
 grammar;
 

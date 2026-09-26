@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
-use crate::ast::*;
-use crate::types::{ErrorAggregate, Name, ProcType, Span, Stack, Type};
+use crate::frontend::ast::*;
+use crate::types::{ErrorAggregate, Name, ProcType, SemanticType, Span, Stack, Type};
 
 // #[derive(Clone, PartialEq)]
 pub struct TypeChecker {
@@ -350,12 +350,6 @@ impl TypeChecker {
     fn collect_error(&mut self, error_type: TypeErrorType, _span: Option<Span>) {
         self.errors.add_error(error_type);
     }
-}
-
-#[derive(Clone)]
-pub enum SemanticType {
-    SimpleType(Type),
-    ProcType(ProcType),
 }
 
 // Type Errors

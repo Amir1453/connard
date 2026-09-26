@@ -1,9 +1,8 @@
-use crate::ast::*;
-use crate::tac::*;
-use crate::types::InstBlock;
-use crate::types::Name;
-use crate::types::Stack;
-use crate::types::Type;
+use crate::frontend::ast::*;
+use crate::ir::tac::*;
+
+use crate::types::{InstBlock, Name, Stack, Type};
+
 use std::collections::HashMap;
 
 pub struct MM {

@@ -15,7 +15,7 @@ static TMP_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| CARGO_MANIFEST_DIR.join("target").join("e2e_artifacts"));
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    println!("cargo::rerun-if-changed=src/bxgrammar.lalrpop");
+    println!("cargo::rerun-if-changed=src/frontend/bxgrammar.lalrpop");
     println!("cargo::rerun-if-changed=tests/golden");
 
     lalrpop::process_root()?;
