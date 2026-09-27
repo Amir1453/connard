@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::{Context, bail};
 
 use crate::frontend::ast::{Declaration, Program};
-use crate::frontend::{BXParser, Lexer, SemChecker, TypeChecker};
+use crate::frontend::{BXParser, Lexer, RetChecker, SemChecker, TypeChecker};
 
 use crate::ir::MM;
 
@@ -103,6 +103,7 @@ impl Driver {
 
             SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
             TypeChecker::check(&mut cu_program, global_decls.clone())?;
+            RetChecker::check(&cu_program)?;
 
             // use crate::ir::mm_llvm;
             // use inkwell::context;
@@ -112,9 +113,9 @@ impl Driver {
             // let _ = mm_llvm::MMLLVM::munch(&context, module, cu_program, global_decls)?;
 
             let cutac = MM::munch(cu_program);
+
             let cutac = Optimizer::optimize(cutac);
             std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
-
 
             let asm = Asm::lower(cutac);
             std::fs::write(out_path, &asm)?;
@@ -125,9 +126,11 @@ impl Driver {
         for (cu, mut cu_program) in cu_programs.into_iter() {
             SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
             TypeChecker::check(&mut cu_program, global_decls.clone())?;
+            RetChecker::check(&cu_program)?;
 
-            // println!("Munching {}...", cu);
             let cutac = MM::munch(cu_program);
+            println!("{}", cutac);
+
             let cutac = Optimizer::optimize(cutac);
             println!("{}", cutac);
 

@@ -15,8 +15,10 @@ static TMP_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| CARGO_MANIFEST_DIR.join("target").join("e2e_artifacts"));
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo::rerun-if-changed=src/frontend/bxgrammar.lalrpop");
-    println!("cargo::rerun-if-changed=tests/golden");
+    println!("cargo:rerun-if-changed=src/frontend/bxgrammar.lalrpop");
+    println!("cargo:rerun-if-changed=tests/golden/examples");
+    println!("cargo:rerun-if-changed=tests/golden/regression");
+    println!("cargo:rerun-if-changed=bxruntime.c");
 
     lalrpop::process_root()?;
     generate_tests()?;
@@ -62,7 +64,10 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 fn integration_{stem}() {{
     let p = PathBuf::from("{p}");
     let asm_path = PathBuf::from("{asm_path}");
-    let _ = Driver::drive(&p, &asm_path);
+
+    let _ = fs::remove_file(&asm_path);
+
+    Driver::drive(&p, &asm_path).unwrap_or_else(|e| panic!("driver failed for {stem}: {{e}}"));
     assert!(asm_path.is_file(), "driver failed for {stem}");
 
     let gcc_status = Command::new("gcc")

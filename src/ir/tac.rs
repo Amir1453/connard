@@ -6,18 +6,22 @@ use std::{
 use crate::frontend::ast::Operator;
 use crate::types::{InstBlock, Name, Type};
 
+#[derive(Clone, Hash, PartialEq)]
 pub struct CUTAC(pub Vec<TACDeclaration>);
 
+#[derive(Clone, Hash, PartialEq)]
 pub enum TACDeclaration {
     GlobalVarDecl(GlobalVarDecl),
     ProcDecl(ProcDecl),
 }
 
+#[derive(Clone, Hash, PartialEq)]
 pub struct GlobalVarDecl {
     pub name: Name,
     pub value: i64,
 }
 
+#[derive(Clone, Hash, PartialEq)]
 pub struct ProcDecl {
     pub name: Name,
     pub arguments: Option<Vec<Name>>,
@@ -89,7 +93,7 @@ pub enum Label {
     Named(Name),
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Copy, Clone, Hash, PartialEq)]
 #[allow(dead_code)]
 pub enum TACType {
     VOID,
@@ -104,7 +108,7 @@ pub enum TACType {
     I64,
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Copy, Clone, Hash, PartialEq)]
 pub enum TACJumpOpcode {
     JZ,
     JNZ,
@@ -114,13 +118,13 @@ pub enum TACJumpOpcode {
     JNLE,
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Copy, Clone, Hash, PartialEq)]
 pub enum TACUnaryOpcode {
     NEG,
     NOT,
 }
 
-#[derive(Clone, Hash, PartialEq)]
+#[derive(Copy, Clone, Hash, PartialEq)]
 pub enum TACBinaryOpcode {
     ADD,
     SUB,

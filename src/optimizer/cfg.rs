@@ -13,8 +13,8 @@ use crate::types::{InstBlock, Name};
 
 pub struct CFG {
     pub graph: StableGraph<BasicBlock, TACInst>,
-    name: Name,
-    arguments: Option<Vec<Name>>,
+    pub name: Name,
+    pub arguments: Option<Vec<Name>>,
 }
 
 impl CFG {

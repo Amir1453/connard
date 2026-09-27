@@ -66,7 +66,7 @@ impl<'ctx> MMLLVM<'ctx> {
             .into_iter()
             .flatten()
             .map(|(_, ty)| self.map_basic_type(ty))
-            .map(|ty| Into::into(ty))
+            .map(Into::into)
             .collect();
 
         let function_type = match proc_type.return_type.as_ref() {
