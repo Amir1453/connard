@@ -1,7 +1,5 @@
-use std::{
-    fmt,
-    ops::{Deref, DerefMut},
-};
+use std::fmt;
+use std::ops::{Deref, DerefMut};
 
 use crate::frontend::ast::Operator;
 use crate::types::{InstBlock, Name, Type};
@@ -217,6 +215,20 @@ impl fmt::Display for ProcDecl {
         }
 
         write!(f, "")
+    }
+}
+
+impl TACInst {
+    pub fn modifies_temp(&self, temp: &TACTemp) -> bool {
+        use TACInst::*;
+
+        match self {
+            Const { destination, .. } | Copi { destination, .. } => destination == temp,
+
+            UnaryOperation { result, .. } | BinaryOperation { result, .. } => result == temp,
+
+            _ => false,
+        }
     }
 }
 

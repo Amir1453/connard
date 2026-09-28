@@ -1,18 +1,16 @@
 use std::collections::HashMap;
 
-use petgraph::{
-    Direction,
-    graph::NodeIndex,
-    prelude::StableGraph,
-    visit::{Bfs, Dfs, EdgeRef, IntoNodeReferences, VisitMap},
-};
+use petgraph::Direction;
+use petgraph::graph::NodeIndex;
+use petgraph::prelude::StableGraph;
+use petgraph::visit::{Bfs, Dfs, EdgeRef, IntoNodeReferences, VisitMap};
 
-use crate::ir::tac::{Label, ProcDecl, TACInst};
+use crate::ir::tac::{Label, ProcDecl, TACInst, TACJumpOpcode};
 use crate::ir::{BasicBlock, BasicBlocks};
 use crate::types::{InstBlock, Name};
 
 pub struct CFG {
-    pub graph: StableGraph<BasicBlock, TACInst>,
+    pub graph: StableGraph<BasicBlock, usize>,
     pub name: Name,
     pub arguments: Option<Vec<Name>>,
 }
@@ -116,7 +114,7 @@ impl CFG {
                 continue;
             }
 
-            let out_edges: Vec<(NodeIndex, TACInst)> = self
+            let out_edges: Vec<(NodeIndex, usize)> = self
                 .graph
                 .edges_directed(successor, Direction::Outgoing)
                 .map(|e| (e.target(), e.weight().clone()))
@@ -153,13 +151,163 @@ impl CFG {
         }
     }
 
-    pub fn jump_threading(&mut self) {}
+    pub fn jump_threading(&mut self) {
+        use TACInst::*;
+
+        let nodes: Vec<NodeIndex> = self.graph.node_indices().collect();
+
+        let mut i = 0usize;
+        while i < nodes.len() {
+            let idx = nodes[i];
+            if self.graph.node_weight(idx).is_none() {
+                i += 1;
+                continue;
+            }
+
+            // Get the outgoing edges of our current block.
+            let out_edges: Vec<(NodeIndex, usize)> = self
+                .graph
+                .edges_directed(idx, Direction::Outgoing)
+                .map(|e| (e.target(), e.weight().clone()))
+                .collect();
+
+            // We continue for every edge instruction that is a ConditionalJump.
+            for (successor_idx, instr_idx) in out_edges {
+                let instr = self.graph[idx].instructions[instr_idx].clone();
+                let (opcode1, cond1, _dest1) = match instr {
+                    ConditionalJump {
+                        opcode,
+                        condition,
+                        destination,
+                    } => (opcode, condition, destination),
+
+                    _ => continue,
+                };
+
+                // If the edge is a ConditionalJump, get the predecessors of the block the
+                // ConditionalJump points to (successor block).
+                // We only work with one predecessor for now.
+                if self
+                    .graph
+                    .neighbors_directed(successor_idx, Direction::Incoming)
+                    .count()
+                    != 1
+                {
+                    continue;
+                }
+
+                // Now, get the outgoing edges of our successor block. We will be changing all the
+                // edges of the successor block that can be changed via opcode matching.
+                let out_edges_successor: Vec<(NodeIndex, usize)> = self
+                    .graph
+                    .edges_directed(successor_idx, Direction::Outgoing)
+                    .map(|e| (e.target(), e.weight().clone()))
+                    .collect();
+
+                // Go through the successor edges, and once again match against ConditionalJump
+                // instructions.
+                for (_successor2_idx, succ_instr_idx) in out_edges_successor {
+                    let suc_instr = self.graph[successor_idx].instructions[succ_instr_idx].clone();
+                    let (opcode2, cond2, dest2) = match suc_instr {
+                        ConditionalJump {
+                            opcode,
+                            condition,
+                            destination,
+                        } => (opcode, condition, destination),
+
+                        _ => continue,
+                    };
+
+                    // If the conditions are not the same, or if the successor block is modifying
+                    // the condition, we cannot make this optimization.
+                    if cond1 != cond2
+                        || self.graph[successor_idx]
+                            .instructions
+                            .iter()
+                            .any(|instr| instr.modifies_temp(&cond2))
+                    {
+                        continue;
+                    }
+
+                    // Match against the opcodes we have to see what we can do. We will have to
+                    // modify the instructions inside of the successor block, as well as updating
+                    // the edges.
+                    let taken_or_not = jthread_match_opcode(opcode1, opcode2);
+
+                    if matches!(taken_or_not, TakenOrNot::AlwaysTaken) {
+                        let successor_block = &mut self.graph[successor_idx];
+
+                        // We create the new instruction that will replace our ConditionalJump.
+                        // So far we do not have to change the outgoing edge,
+                        let new_instr = UnconditionalJump(dest2);
+                        successor_block.instructions[instr_idx] = new_instr;
+
+                        let mut windx = instr_idx + 1;
+                        while let Some(_) = successor_block.instructions.get(windx) {
+                            successor_block.instructions[windx] = TACInst::Nop;
+                            windx += 1;
+                        }
+
+                        let edges_to_remove: Vec<_> = self
+                            .graph
+                            .edges_directed(successor_idx, Direction::Outgoing)
+                            .filter(|edge| *edge.weight() >= instr_idx)
+                            .map(|edge| edge.id())
+                            .collect();
+
+                        for edge_idx in edges_to_remove {
+                            self.graph.remove_edge(edge_idx);
+                        }
+                    }
+
+                    if matches!(taken_or_not, TakenOrNot::NeverTaken) {}
+
+                    if matches!(taken_or_not, TakenOrNot::Unknown) {
+                        continue;
+                    }
+                }
+            }
+
+            i += 1;
+        }
+    }
+}
+
+fn jthread_match_opcode(opcode1: TACJumpOpcode, opcode2: TACJumpOpcode) -> TakenOrNot {
+    // Same opcode implies always taken
+    if opcode1 == opcode2 {
+        return TakenOrNot::AlwaysTaken;
+    }
+
+    use TACJumpOpcode::*;
+    match (opcode1, opcode2) {
+        // x < 0 -> x != 0, x <= 0.
+        // x > 0 -> x != 0, x >= 0.
+        (JL, JNZ | JLE) | (JNLE, JNZ | JNL) => TakenOrNot::AlwaysTaken,
+
+        // x < 0 -> not x = 0, not x > 0, not x >= 0.
+        // x > 0 -> not x = 0, not x < 0, not x <= 0.
+        (JL, JZ | JNL | JNLE) | (JNLE, JZ | JL | JLE) => TakenOrNot::NeverTaken,
+
+        // x >= 0 -> not x < 0.
+        // x <= 0 -> not x > 0.
+        (JNL, JL) | (JLE, JNLE) => TakenOrNot::NeverTaken,
+
+        // Rest we dont care
+        _ => TakenOrNot::Unknown,
+    }
+}
+
+enum TakenOrNot {
+    AlwaysTaken,
+    NeverTaken,
+    Unknown,
 }
 
 impl From<BasicBlocks> for CFG {
     fn from(value: BasicBlocks) -> Self {
-        let mut graph: StableGraph<BasicBlock, TACInst> = StableGraph::new();
-        let mut edges: Vec<(NodeIndex, NodeIndex, TACInst)> = Vec::new();
+        let mut graph: StableGraph<BasicBlock, usize> = StableGraph::new();
+        let mut edges: Vec<(NodeIndex, NodeIndex, usize)> = Vec::new();
         let mut label_to_index: HashMap<Label, NodeIndex> = HashMap::new();
 
         // Populate the nodes of the graph
@@ -171,7 +319,7 @@ impl From<BasicBlocks> for CFG {
 
         // Go through instruction and find edges
         for (node_id, block) in graph.node_references() {
-            for instruction in &block.instructions {
+            for (idx, instruction) in block.instructions.iter().enumerate() {
                 use TACInst::*;
                 match instruction {
                     UnconditionalJump(label)
@@ -179,7 +327,7 @@ impl From<BasicBlocks> for CFG {
                         destination: label, ..
                     } => {
                         if let Some(&dest_node_id) = label_to_index.get(label) {
-                            edges.push((node_id, dest_node_id, instruction.clone()));
+                            edges.push((node_id, dest_node_id, idx));
                         }
                     }
                     _ => {}

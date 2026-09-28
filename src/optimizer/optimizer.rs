@@ -15,9 +15,9 @@ impl Optimizer {
             if let ProcDecl(proc) = decl {
                 let mut cfg = CFG::from(BasicBlocks::from(proc));
 
+                cfg.jump_threading();
                 cfg.remove_unreachable();
                 cfg.coalesce_blocks();
-                cfg.jump_threading();
 
                 let proc = cfg.serialize_tac();
 

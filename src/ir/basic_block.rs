@@ -142,6 +142,30 @@ impl BasicBlock {
     pub fn pop_instruction(&mut self) -> Option<TACInst> {
         self.instructions.pop()
     }
+
+    #[allow(dead_code)]
+    pub fn get_terminator(&self) -> Option<TACInst> {
+        let last = self.instructions.last();
+        match last {
+            Some(TACInst::UnconditionalJump(_) | TACInst::Return(_)) => last.cloned(),
+            Some(_) => None,
+            None => None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_pre_terminator(&self) -> Option<TACInst> {
+        let last = self.instructions.last();
+        if !matches!(
+            last,
+            Some(TACInst::UnconditionalJump(_) | TACInst::Return(_))
+        ) {
+            return None;
+        }
+
+        let len = self.instructions.len();
+        return self.instructions.get(len - 1).cloned();
+    }
 }
 
 impl std::fmt::Display for BasicBlock {
