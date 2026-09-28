@@ -54,6 +54,7 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 
         let stem = p.file_stem().unwrap().to_str().unwrap();
         let asm_path = TMP_DIR.join(format!("{}.s", stem));
+        let tac_path = TMP_DIR.join(format!("{}.tac", p.display()));
         let exe_path = TMP_DIR.join(stem);
 
         let exoutput_file = test_dir.join(format!("{}_output.txt", stem));
@@ -64,8 +65,10 @@ fn generate_integration_tests() -> Result<(), std::io::Error> {
 fn integration_{stem}() {{
     let p = PathBuf::from("{p}");
     let asm_path = PathBuf::from("{asm_path}");
+    let tac_path = PathBuf::from("{tac_path}");
 
     let _ = fs::remove_file(&asm_path);
+    let _ = fs::remove_file(&tac_path);
 
     Driver::drive(&p, &asm_path).unwrap_or_else(|e| panic!("driver failed for {stem}: {{e}}"));
     assert!(asm_path.is_file(), "driver failed for {stem}");
@@ -99,6 +102,7 @@ fn integration_{stem}() {{
 "#,
             p = p.display(),
             asm_path = asm_path.display(),
+            tac_path = tac_path.display(),
             print_c = print_c.display(),
             exe_path = exe_path.display(),
             exoutput_file = exoutput_file.display()
