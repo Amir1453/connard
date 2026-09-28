@@ -172,8 +172,8 @@ impl CFG {
                 .collect();
 
             // We continue for every edge instruction that is a ConditionalJump.
-            for (successor_idx, instr_idx) in out_edges {
-                let instr = self.graph[idx].instructions[instr_idx].clone();
+            for (successor_idx, pred_instr_idx) in out_edges {
+                let instr = self.graph[idx].instructions[pred_instr_idx].clone();
                 let (opcode1, cond1, _dest1) = match instr {
                     ConditionalJump {
                         opcode,
@@ -240,9 +240,9 @@ impl CFG {
                         // We create the new instruction that will replace our ConditionalJump.
                         // So far we do not have to change the outgoing edge,
                         let new_instr = UnconditionalJump(dest2);
-                        successor_block.instructions[instr_idx] = new_instr;
+                        successor_block.instructions[succ_instr_idx] = new_instr;
 
-                        let mut windx = instr_idx + 1;
+                        let mut windx = succ_instr_idx + 1;
                         while let Some(_) = successor_block.instructions.get(windx) {
                             successor_block.instructions[windx] = TACInst::Nop;
                             windx += 1;
@@ -251,7 +251,7 @@ impl CFG {
                         let edges_to_remove: Vec<_> = self
                             .graph
                             .edges_directed(successor_idx, Direction::Outgoing)
-                            .filter(|edge| *edge.weight() >= instr_idx)
+                            .filter(|edge| *edge.weight() > succ_instr_idx)
                             .map(|edge| edge.id())
                             .collect();
 
@@ -344,5 +344,56 @@ impl From<BasicBlocks> for CFG {
             name: value.proc_name,
             arguments: value.arguments,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ir::tac::{Label, TACJumpOpcode};
+    use crate::ir::tac_builder::ProcBuilder;
+    use crate::types::Name;
+
+    #[test]
+    fn jump_threading_example() {
+        let mut proc = ProcBuilder::new(Name::from("class"));
+        proc.add_argument("x");
+
+        let l0 = Label::Numeric(0);
+        let l1 = Label::Numeric(1);
+        let l3 = Label::Numeric(3);
+        let l4 = Label::Numeric(4);
+        let ret_class = Label::Named(Name::from("ret_class"));
+
+        proc.constant("zero_1", 0)
+            .branch_named(TACJumpOpcode::JNLE, "zero_1", l0.clone())
+            .jump(l1.clone());
+
+        proc.label_decl(l1);
+
+        proc.constant("error_value", -69)
+            .copy("error_value", "returned_value")
+            .jump(ret_class.clone());
+
+        proc.label_decl(l0);
+
+        proc.branch_named(TACJumpOpcode::JNLE, "zero_1", l3.clone())
+            .jump(l4.clone());
+
+        proc.label_decl(l3);
+        proc.constant("error_value", -69)
+            .copy("error_value", "returned_value")
+            .jump(ret_class.clone());
+
+        proc.label_decl(ret_class);
+        proc.return_void();
+
+        let procedure = proc.build();
+
+        eprintln!("{procedure}");
+
+        let mut cfg = super::CFG::from(super::BasicBlocks::from(procedure));
+        cfg.jump_threading();
+
+        eprintln!("{}", cfg.serialize_tac());
     }
 }

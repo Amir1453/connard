@@ -1,0 +1,192 @@
+#![allow(dead_code)]
+
+use std::collections::HashMap;
+
+use crate::ir::tac::{Label, ProcDecl, TACBinaryOpcode, TACInst, TACJumpOpcode, TACTemp};
+use crate::types::{InstBlock, Name};
+
+pub struct ProcBuilder {
+    pub name: Name,
+    pub arguments: Option<Vec<Name>>,
+    pub instructions: InstBlock,
+
+    variables: HashMap<Name, TACTemp>,
+    next_temp: i64,
+}
+
+impl ProcBuilder {
+    pub fn new(name: Name) -> Self {
+        Self {
+            name,
+            arguments: None,
+            instructions: InstBlock::new(),
+            variables: HashMap::new(),
+            next_temp: 0,
+        }
+    }
+
+    pub fn build(self) -> ProcDecl {
+        ProcDecl {
+            name: self.name,
+            arguments: self.arguments,
+            instructions: self.instructions,
+        }
+    }
+
+    pub fn add_argument<N: Into<Name> + Clone>(&mut self, arg: N) {
+        self.define(arg.clone());
+        self.arguments.get_or_insert_with(Vec::new).push(arg.into());
+    }
+
+    pub fn add_instruction(&mut self, instr: TACInst) -> &mut Self {
+        self.instructions.push(instr);
+        self
+    }
+
+    pub fn constant<N: Into<Name>>(&mut self, name: N, value: i64) -> &mut Self {
+        let destination = self.define(name);
+
+        self.add_instruction(TACInst::Const {
+            destination,
+            constant: value,
+        })
+    }
+
+    pub fn copy<S: Into<Name>, D: Into<Name>>(&mut self, source: S, destination: D) -> &mut Self {
+        let source = self.resolve(source);
+        let destination = self.define(destination);
+
+        self.add_instruction(TACInst::Copi {
+            destination,
+            source,
+        })
+    }
+
+    pub fn binary<L: Into<Name>, R: Into<Name>, D: Into<Name>>(
+        &mut self,
+        opcode: TACBinaryOpcode,
+        lhs: L,
+        rhs: R,
+        destination: D,
+    ) -> &mut Self {
+        let lhs = self.resolve(lhs);
+        let rhs = self.resolve(rhs);
+        let result = self.define(destination);
+
+        self.add_instruction(TACInst::BinaryOperation {
+            opcode,
+            lhs,
+            rhs,
+            result,
+        })
+    }
+
+    pub fn add<L: Into<Name>, R: Into<Name>, D: Into<Name>>(
+        &mut self,
+        lhs: L,
+        rhs: R,
+        destination: D,
+    ) -> &mut Self {
+        self.binary(TACBinaryOpcode::ADD, lhs, rhs, destination)
+    }
+
+    pub fn sub<L: Into<Name>, R: Into<Name>, D: Into<Name>>(
+        &mut self,
+        lhs: L,
+        rhs: R,
+        destination: D,
+    ) -> &mut Self {
+        self.binary(TACBinaryOpcode::SUB, lhs, rhs, destination)
+    }
+
+    pub fn mul<L: Into<Name>, R: Into<Name>, D: Into<Name>>(
+        &mut self,
+        lhs: L,
+        rhs: R,
+        destination: D,
+    ) -> &mut Self {
+        self.binary(TACBinaryOpcode::MUL, lhs, rhs, destination)
+    }
+
+    pub fn div<L: Into<Name>, R: Into<Name>, D: Into<Name>>(
+        &mut self,
+        lhs: L,
+        rhs: R,
+        destination: D,
+    ) -> &mut Self {
+        self.binary(TACBinaryOpcode::DIV, lhs, rhs, destination)
+    }
+
+    pub fn label_decl(&mut self, label: Label) -> &mut Self {
+        self.add_instruction(TACInst::LabelDecl(label))
+    }
+
+    pub fn jump(&mut self, destination: Label) -> &mut Self {
+        self.add_instruction(TACInst::UnconditionalJump(destination))
+    }
+
+    pub fn branch_named<N: Into<Name>>(
+        &mut self,
+        opcode: TACJumpOpcode,
+        condition: N,
+        destination: Label,
+    ) -> &mut Self {
+        let condition = self.resolve(condition);
+
+        self.add_instruction(TACInst::ConditionalJump {
+            opcode,
+            condition,
+            destination,
+        })
+    }
+
+    pub fn return_void(&mut self) -> &mut Self {
+        self.add_instruction(TACInst::Return(None))
+    }
+
+    pub fn return_value(&mut self, value: TACTemp) -> &mut Self {
+        self.add_instruction(TACInst::Return(Some(value)))
+    }
+
+    fn fresh_temp(&mut self) -> TACTemp {
+        let temp = TACTemp::Temp(self.next_temp);
+        self.next_temp += 1;
+        temp
+    }
+
+    fn define<N: Into<Name>>(&mut self, name: N) -> TACTemp {
+        let name = name.into();
+        let temp = self.fresh_temp();
+
+        self.variables.insert(name, temp.clone());
+
+        temp
+    }
+
+    fn resolve<N: Into<Name>>(&self, name: N) -> TACTemp {
+        let name = name.into();
+
+        self.variables
+            .get(&name)
+            .cloned()
+            .unwrap_or_else(|| panic!("use of undefined variable `{}`", name))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_addition() {
+        let mut proc = ProcBuilder::new(Name::from("main"));
+
+        proc.constant("rhs", 10)
+            .constant("lhs", 20)
+            .add("lhs", "rhs", "result");
+
+        let procedure = proc.build();
+
+        eprintln!("{}", procedure);
+    }
+}
