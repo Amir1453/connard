@@ -234,15 +234,19 @@ impl CFG {
                     // the edges.
                     let taken_or_not = jthread_match_opcode(opcode1, opcode2);
 
+                    // This is the branch where the ConditionalJump is always taken.
                     if matches!(taken_or_not, TakenOrNot::AlwaysTaken) {
                         let successor_block = &mut self.graph[successor_idx];
 
-                        // We create the new instruction that will replace our ConditionalJump.
-                        // So far we do not have to change the outgoing edge,
+                        // We replace our ConditionalJump instruction with an UnconditionalJump.
+                        // Now, we can get rid of the rest of the block body after the
+                        // ConditionalJump, since it will not be reached.
                         let new_instr = UnconditionalJump(dest2);
                         successor_block.instructions[succ_instr_idx] = new_instr;
                         successor_block.instructions.truncate(succ_instr_idx + 1);
 
+                        // Since we got rid of the instructions, we get rid of the edges associated
+                        // to those instructions as well.
                         let edges_to_remove: Vec<_> = self
                             .graph
                             .edges_directed(successor_idx, Direction::Outgoing)
@@ -255,11 +259,41 @@ impl CFG {
                         }
                     }
 
-                    if matches!(taken_or_not, TakenOrNot::NeverTaken) {}
+                    // This is the branch where the ConditionalJump is never taken.
+                    if matches!(taken_or_not, TakenOrNot::NeverTaken) {
+                        let successor_block = &mut self.graph[successor_idx];
 
-                    if matches!(taken_or_not, TakenOrNot::Unknown) {
-                        continue;
+                        // We remove the ConditionalJump instruction, since it will never be taken.
+                        successor_block.instructions.remove(succ_instr_idx);
+
+                        // We have to remove the edge associated to this ConditionalJump insruction.
+                        let edges_to_remove: Vec<_> = self
+                            .graph
+                            .edges_directed(successor_idx, Direction::Outgoing)
+                            .filter(|edge| *edge.weight() == succ_instr_idx)
+                            .map(|edge| edge.id())
+                            .collect();
+
+                        for edge_idx in edges_to_remove {
+                            self.graph.remove_edge(edge_idx);
+                        }
+
+                        // Now we have to update all the affected edges.
+                        let edges_to_update: Vec<_> = self
+                            .graph
+                            .edges_directed(successor_idx, Direction::Outgoing)
+                            .filter(|edge| *edge.weight() > succ_instr_idx)
+                            .map(|edge| edge.id())
+                            .collect();
+
+                        for edge_idx in edges_to_update {
+                            if let Some(edge) = self.graph.edge_weight_mut(edge_idx) {
+                                *edge -= 1;
+                            }
+                        }
                     }
+
+                    break;
                 }
             }
 
@@ -344,42 +378,74 @@ impl From<BasicBlocks> for CFG {
 
 #[cfg(test)]
 mod tests {
-    use crate::ir::tac::{Label, TACJumpOpcode};
+    use crate::ir::tac::TACJumpOpcode;
     use crate::ir::tac_builder::ProcBuilder;
     use crate::types::Name;
 
     #[test]
-    fn jump_threading_example() {
+    fn jump_threading_always_taken_example() {
         let mut proc = ProcBuilder::new(Name::from("class"));
         proc.add_argument("x");
 
-        let l0 = Label::Numeric(0);
-        let l1 = Label::Numeric(1);
-        let l3 = Label::Numeric(3);
-        let l4 = Label::Numeric(4);
-        let ret_class = Label::Named(Name::from("ret_class"));
+        proc.constant("zero_1", 0)
+            .branch_named(TACJumpOpcode::JNLE, "zero_1", "l0")
+            .jump("l1");
+
+        proc.label_decl("l1");
+
+        proc.constant("error_value", -69)
+            .copy("error_value", "returned_value")
+            .jump("ret");
+
+        proc.label_decl("l0");
+
+        proc.branch_named(TACJumpOpcode::JNLE, "zero_1", "l3")
+            .jump("ret");
+
+        proc.label_decl("l3");
+        proc.constant("error_value", -69)
+            .copy("error_value", "returned_value")
+            .jump("ret");
+
+        proc.label_decl("ret");
+        proc.return_void();
+
+        let procedure = proc.build();
+
+        eprintln!("{procedure}");
+
+        let mut cfg = super::CFG::from(super::BasicBlocks::from(procedure));
+        cfg.jump_threading();
+
+        eprintln!("{}", cfg.serialize_tac());
+    }
+
+    #[test]
+    fn jump_threading_never_taken_example() {
+        let mut proc = ProcBuilder::new(Name::from("class"));
+        proc.add_argument("x");
 
         proc.constant("zero_1", 0)
-            .branch_named(TACJumpOpcode::JNLE, "zero_1", l0.clone())
-            .jump(l1.clone());
+            .branch_named(TACJumpOpcode::JNLE, "zero_1", "l0")
+            .jump("l1");
 
-        proc.label_decl(l1);
+        proc.label_decl("l1");
 
         proc.constant("error_value", -69)
             .copy("error_value", "returned_value")
-            .jump(ret_class.clone());
+            .jump("ret");
 
-        proc.label_decl(l0);
+        proc.label_decl("l0");
 
-        proc.branch_named(TACJumpOpcode::JNLE, "zero_1", l3.clone())
-            .jump(l4.clone());
+        proc.branch_named(TACJumpOpcode::JZ, "zero_1", "l3")
+            .jump("ret");
 
-        proc.label_decl(l3);
+        proc.label_decl("l3");
         proc.constant("error_value", -69)
             .copy("error_value", "returned_value")
-            .jump(ret_class.clone());
+            .jump("ret");
 
-        proc.label_decl(ret_class);
+        proc.label_decl("ret");
         proc.return_void();
 
         let procedure = proc.build();

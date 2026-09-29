@@ -13,7 +13,9 @@ pub struct ProcBuilder {
     pub instructions: InstBlock,
 
     variables: HashMap<Name, TACTemp>,
+    labels: HashMap<Name, Label>,
     next_temp: i64,
+    next_label: i64,
 }
 
 impl ProcBuilder {
@@ -23,7 +25,9 @@ impl ProcBuilder {
             arguments: None,
             instructions: InstBlock::new(),
             variables: HashMap::new(),
+            labels: HashMap::new(),
             next_temp: 0,
+            next_label: 0,
         }
     }
 
@@ -119,11 +123,13 @@ impl ProcBuilder {
         self.binary(TACBinaryOpcode::DIV, lhs, rhs, destination)
     }
 
-    pub fn label_decl(&mut self, label: Label) -> &mut Self {
+    pub fn label_decl<L: Into<Name>>(&mut self, label: L) -> &mut Self {
+        let label = self.resolve_label(label);
         self.add_instruction(TACInst::LabelDecl(label))
     }
 
-    pub fn jump(&mut self, destination: Label) -> &mut Self {
+    pub fn jump<L: Into<Name>>(&mut self, destination: L) -> &mut Self {
+        let destination = self.resolve_label(destination);
         self.add_instruction(TACInst::UnconditionalJump(destination))
     }
 
@@ -131,9 +137,10 @@ impl ProcBuilder {
         &mut self,
         opcode: TACJumpOpcode,
         condition: N,
-        destination: Label,
+        destination: N,
     ) -> &mut Self {
         let condition = self.resolve(condition);
+        let destination = self.resolve_label(destination);
 
         self.add_instruction(TACInst::ConditionalJump {
             opcode,
@@ -148,12 +155,6 @@ impl ProcBuilder {
 
     pub fn return_value(&mut self, value: TACTemp) -> &mut Self {
         self.add_instruction(TACInst::Return(Some(value)))
-    }
-
-    fn fresh_temp(&mut self) -> TACTemp {
-        let temp = TACTemp::Temp(self.next_temp);
-        self.next_temp += 1;
-        temp
     }
 
     fn define<N: Into<Name>>(&mut self, name: N) -> TACTemp {
@@ -172,6 +173,36 @@ impl ProcBuilder {
             .get(&name)
             .cloned()
             .unwrap_or_else(|| panic!("use of undefined variable `{}`", name))
+    }
+
+    fn define_label<L: Into<Name>>(&mut self, name: L) -> Label {
+        let name = name.into();
+        let label = self.fresh_label();
+
+        self.labels.insert(name, label.clone());
+
+        label
+    }
+
+    fn resolve_label<L: Into<Name>>(&mut self, name: L) -> Label {
+        let name = name.into();
+
+        match self.labels.get(&name) {
+            Some(label) => label.clone(),
+            None => self.define_label(name),
+        }
+    }
+
+    fn fresh_temp(&mut self) -> TACTemp {
+        let temp = TACTemp::Temp(self.next_temp);
+        self.next_temp += 1;
+        temp
+    }
+
+    fn fresh_label(&mut self) -> Label {
+        let label = Label::Numeric(self.next_label);
+        self.next_label += 1;
+        label
     }
 }
 
