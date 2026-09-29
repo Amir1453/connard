@@ -5,9 +5,9 @@ use petgraph::graph::NodeIndex;
 use petgraph::prelude::StableGraph;
 use petgraph::visit::{Bfs, Dfs, EdgeRef, IntoNodeReferences, VisitMap};
 
-use crate::ir::tac::{Label, ProcDecl, TACInst, TACJumpOpcode};
+use crate::ir::tac::{InstBlock, Label, ProcDecl, TACInst, TACJumpOpcode};
 use crate::ir::{BasicBlock, BasicBlocks};
-use crate::types::{InstBlock, Name};
+use crate::types::Name;
 
 pub struct CFG {
     pub graph: StableGraph<BasicBlock, usize>,

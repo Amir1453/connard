@@ -2,7 +2,7 @@ use std::fmt;
 use std::ops::{Deref, DerefMut};
 
 use crate::frontend::ast::Operator;
-use crate::types::{InstBlock, Name, Type};
+use crate::types::{Name, Type};
 
 #[derive(Clone, Hash, PartialEq)]
 pub struct CUTAC(pub Vec<TACDeclaration>);
@@ -25,6 +25,8 @@ pub struct ProcDecl {
     pub arguments: Option<Vec<Name>>,
     pub instructions: InstBlock,
 }
+
+pub type InstBlock = Vec<TACInst>;
 
 #[derive(Clone, Hash, PartialEq, Default)]
 pub enum TACInst {

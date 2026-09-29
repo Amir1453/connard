@@ -9,7 +9,7 @@ use inkwell::types::BasicType;
 
 use crate::frontend::ast::*;
 
-use crate::types::{InstBlock, Name, ProcType, SemanticType, Stack, Type};
+use crate::types::{Name, ProcType, SemanticType, Type};
 
 pub struct MMLLVM<'ctx> {
     context: &'ctx inkwell::context::Context,

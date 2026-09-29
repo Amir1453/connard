@@ -2,8 +2,10 @@
 
 use std::collections::HashMap;
 
-use crate::ir::tac::{Label, ProcDecl, TACBinaryOpcode, TACInst, TACJumpOpcode, TACTemp};
-use crate::types::{InstBlock, Name};
+use crate::ir::tac::{
+    InstBlock, Label, ProcDecl, TACBinaryOpcode, TACInst, TACJumpOpcode, TACTemp,
+};
+use crate::types::Name;
 
 pub struct ProcBuilder {
     pub name: Name,

@@ -1,5 +1,6 @@
 use crate::frontend::ast::{Block, Program, Statement};
-use crate::types::{ErrorAggregate, Name};
+use crate::structs::ErrorAggregate;
+use crate::types::Name;
 
 pub struct RetChecker {}
 

@@ -2,7 +2,8 @@ use std::collections::HashSet;
 use std::iter::zip;
 
 use crate::frontend::ast::*;
-use crate::types::{ErrorAggregate, Name, Span, Stack};
+use crate::structs::{ErrorAggregate, Stack};
+use crate::types::{Name, Span};
 
 pub struct SemChecker {
     scopes: Stack<HashSet<Name>>,

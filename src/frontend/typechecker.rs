@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::iter::zip;
 
 use crate::frontend::ast::*;
-use crate::types::{ErrorAggregate, Name, ProcType, SemanticType, Span, Stack, Type};
+use crate::structs::{ErrorAggregate, Stack};
+use crate::types::{Name, ProcType, SemanticType, Span, Type};
 
 // #[derive(Clone, PartialEq)]
 pub struct TypeChecker {

@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use crate::frontend::ast::*;
 use crate::ir::tac::*;
 
-use crate::types::{InstBlock, Name, Stack, Type};
+use crate::structs::Stack;
+use crate::types::{Name, Type};
 
 pub struct MM {
     cutac: CUTAC,

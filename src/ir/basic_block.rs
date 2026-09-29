@@ -1,7 +1,7 @@
 use compact_str::CompactString;
 
-use crate::ir::tac::{Label, ProcDecl, TACInst};
-use crate::types::{InstBlock, Name};
+use crate::ir::tac::{InstBlock, Label, ProcDecl, TACInst};
+use crate::types::Name;
 
 pub struct BasicBlocks {
     pub blocks: Vec<BasicBlock>,
