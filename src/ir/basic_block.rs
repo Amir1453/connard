@@ -164,7 +164,7 @@ impl BasicBlock {
         }
 
         let len = self.instructions.len();
-        return self.instructions.get(len - 1).cloned();
+        self.instructions.get(len - 1).cloned()
     }
 }
 

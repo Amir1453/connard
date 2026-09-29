@@ -8,20 +8,17 @@ impl RetChecker {
         let mut errors = ErrorAggregate::<NoReturnError>::new();
 
         for decl in &program.0 {
-            match decl {
-                super::ast::Declaration::Proc {
-                    proc_name, block, ..
-                } => {
-                    if proc_name == "main" {
-                        continue;
-                    }
-
-                    if !Self::check_block(block) {
-                        errors.add_error(NoReturnError(proc_name.clone()));
-                    }
+            if let super::ast::Declaration::Proc {
+                proc_name, block, ..
+            } = decl
+            {
+                if proc_name == "main" {
+                    continue;
                 }
 
-                _ => {}
+                if !Self::check_block(block) {
+                    errors.add_error(NoReturnError(proc_name.clone()));
+                }
             }
         }
 

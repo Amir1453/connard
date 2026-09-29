@@ -117,7 +117,7 @@ impl CFG {
             let out_edges: Vec<(NodeIndex, usize)> = self
                 .graph
                 .edges_directed(successor, Direction::Outgoing)
-                .map(|e| (e.target(), e.weight().clone()))
+                .map(|e| (e.target(), *e.weight()))
                 .collect();
 
             let successor_block = match self.graph.remove_node(successor) {
@@ -168,7 +168,7 @@ impl CFG {
             let out_edges: Vec<(NodeIndex, usize)> = self
                 .graph
                 .edges_directed(idx, Direction::Outgoing)
-                .map(|e| (e.target(), e.weight().clone()))
+                .map(|e| (e.target(), *e.weight()))
                 .collect();
 
             // We continue for every edge instruction that is a ConditionalJump.
@@ -201,7 +201,7 @@ impl CFG {
                 let out_edges_successor: Vec<(NodeIndex, usize)> = self
                     .graph
                     .edges_directed(successor_idx, Direction::Outgoing)
-                    .map(|e| (e.target(), e.weight().clone()))
+                    .map(|e| (e.target(), *e.weight()))
                     .collect();
 
                 // Go through the successor edges, and once again match against ConditionalJump
@@ -241,12 +241,7 @@ impl CFG {
                         // So far we do not have to change the outgoing edge,
                         let new_instr = UnconditionalJump(dest2);
                         successor_block.instructions[succ_instr_idx] = new_instr;
-
-                        let mut windx = succ_instr_idx + 1;
-                        while let Some(_) = successor_block.instructions.get(windx) {
-                            successor_block.instructions[windx] = TACInst::Nop;
-                            windx += 1;
-                        }
+                        successor_block.instructions.truncate(succ_instr_idx + 1);
 
                         let edges_to_remove: Vec<_> = self
                             .graph

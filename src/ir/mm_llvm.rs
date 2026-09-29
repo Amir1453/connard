@@ -69,16 +69,14 @@ impl<'ctx> MMLLVM<'ctx> {
             .map(Into::into)
             .collect();
 
-        let function_type = match proc_type.return_type.as_ref() {
+        match proc_type.return_type.as_ref() {
             Some(return_type) => {
                 let return_type = self.map_basic_type(*return_type);
                 return_type.fn_type(&args, false)
             }
 
             None => self.context.void_type().fn_type(&args, false),
-        };
-
-        function_type
+        }
     }
 
     pub fn munch_program(self, program: Program) -> Result<Module<'ctx>, BuilderError> {
