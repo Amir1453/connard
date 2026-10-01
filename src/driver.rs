@@ -1,7 +1,7 @@
 use std::collections::{HashMap, hash_map::Entry};
 use std::path::PathBuf;
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 
 use crate::backend::Asm;
 use crate::frontend::ast::{Declaration, Program};
@@ -15,25 +15,29 @@ use crate::types::{Name, ProcType, SemanticType};
 pub struct Driver {}
 
 impl Driver {
+    /// The CLI entrypoint of the compiler, where the CompilerOptions are provided by shell
+    /// arguments.
     pub fn cli() -> anyhow::Result<()> {
-        let options = CompilerOptions::from_env();
+        let options = CompilerOptions::from_env()?;
 
-        if options.cu_is_empty() {
-            bail!("no input files")
-        }
-
-        Driver::compile(options)
+        Self::entrypoint(options)
     }
 
+    /// The testing entrypoint of the compiler, intended for use with integration tests.
     pub fn drive(cu: &PathBuf, out_path: &PathBuf) -> anyhow::Result<()> {
-        let options = CompilerOptions::from_singular(cu, out_path);
+        let options = CompilerOptions::from_paths(cu, out_path);
 
-        Driver::compile(options)
+        Self::entrypoint(options)
     }
 
-    fn compile(options: CompilerOptions) -> anyhow::Result<()> {
-        // globals::create_session_globals_then(&[], || {});
+    /// All entrances are done through here, where we create the session globals.
+    fn entrypoint(options: CompilerOptions) -> anyhow::Result<()> {
+        globals::create_session_globals_then(|| Driver::compile(options))
+    }
 
+    /// The main compilation pipeline of the compiler, lexing, parsing, semantic checking, type
+    /// checking, munching, optimizations, and lowering are all done here.
+    fn compile(options: CompilerOptions) -> anyhow::Result<()> {
         // Generate the parser
         let parser = BXParser::new();
 
@@ -93,56 +97,24 @@ impl Driver {
             bail!("No main() ! Maybe I am a linker ?")
         }
 
-        // Handling the case for Driver::drive()
-        if let Some(out_path) = options.out_path {
-            let (_cu, mut cu_program) = cu_programs
-                .into_iter()
-                .next()
-                .context("Program List Empty!")?;
-
-            SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
-            TypeChecker::check(&mut cu_program, global_decls.clone())?;
-            RetChecker::check(&cu_program)?;
-
-            // use crate::ir::mm_llvm;
-            // use inkwell::context;
-            //
-            // let context = context::Context::create();
-            // let module = context.create_module("test");
-            // let _ = mm_llvm::MMLLVM::munch(&context, module, cu_program, global_decls)?;
-
-            let cutac = MM::munch(cu_program);
-
-            let cutac = Optimizer::optimize(cutac);
-            std::fs::write(out_path.with_added_extension("tac"), format!("{cutac}"))?;
-
-            let asm = Asm::lower(cutac);
-            std::fs::write(out_path, &asm)?;
-
-            return Ok(());
-        }
-
         for (cu, mut cu_program) in cu_programs.into_iter() {
             SemChecker::check(&cu_program, global_decls.keys().cloned().collect())?;
             TypeChecker::check(&mut cu_program, global_decls.clone())?;
             RetChecker::check(&cu_program)?;
 
             let cutac = MM::munch(cu_program);
-            println!("{}", cutac);
-
             let cutac = Optimizer::optimize(cutac);
-            println!("{}", cutac);
-
-            // let asm = Asm::lower(optimized_cutac);
             let asm = Asm::lower(cutac);
-            // println!("{}", asm);
 
-            let stem = cu
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .context("failed to get file stem")?;
-            let mut out_path = PathBuf::from(stem);
-            out_path.set_extension("s");
+            let out_path = options.out_path.clone().unwrap_or_else(|| {
+                let mut path = PathBuf::from(
+                    cu.file_stem()
+                        .and_then(|s| s.to_str())
+                        .expect("file stem should be valid UTF-8"),
+                );
+                path.set_extension("s");
+                path
+            });
 
             std::fs::write(out_path, &asm)?;
         }

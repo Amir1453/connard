@@ -103,50 +103,14 @@ struct InternerInner {
 }
 
 impl Interner {
-    pub fn with_extra_symbols(extra: &[&'static str]) -> Self {
-        Interner::prefill(&[], extra)
-    }
-
-    fn prefill(init: &[&'static str], extra: &[&'static str]) -> Self {
-        let values = init
-            .iter()
-            .copied()
-            .chain(extra.iter().copied())
-            .map(|str| str.as_bytes());
-        let (size_hint, _) = values.size_hint();
-        let mut conflicting_values: Vec<&[u8]> = Vec::new();
-
-        let mut indices: HashTable<(&'static [u8], u32)> = HashTable::with_capacity(size_hint);
-        let hasher = hashbrown::DefaultHashBuilder::default();
-
-        let mut byte_strs: Vec<&'static [u8]> = Vec::with_capacity(size_hint);
-
-        for v in values {
-            match indices.entry(
-                hasher.hash_one(&v),
-                |&(s, _)| s == v,
-                |&(s, _)| hasher.hash_one(s),
-            ) {
-                Entry::Occupied(v) => conflicting_values.push(v.get().0),
-                Entry::Vacant(view) => {
-                    view.insert((v, byte_strs.len() as u32));
-                    byte_strs.push(v);
-                }
-            }
-        }
-
-        if conflicting_values.len() != 0 {
-            panic!(
-                "duplicate symbols in the rustc symbol list and the extra symbols added by the driver: {:?}",
-                conflicting_values
-            )
-        }
-
-        Interner(parking_lot::Mutex::new(InternerInner {
+    pub fn new() -> Self {
+        let inner = InternerInner {
             arena: Default::default(),
-            indices,
-            byte_strs,
-        }))
+            indices: Default::default(),
+            byte_strs: Default::default(),
+        };
+
+        Self(parking_lot::Mutex::new(inner))
     }
 
     fn intern_str(&self, str: &str) -> Symbol {

@@ -1,11 +1,12 @@
+// The following code was directly taken and/or inspired by the rustc/arena code.
 pub struct SessionGlobals {
     symbol_interner: crate::frontend::Interner,
 }
 
 impl SessionGlobals {
-    pub fn new(extra_symbols: &[&'static str]) -> SessionGlobals {
+    pub fn new() -> SessionGlobals {
         SessionGlobals {
-            symbol_interner: crate::frontend::Interner::with_extra_symbols(extra_symbols),
+            symbol_interner: crate::frontend::Interner::new(),
         }
     }
 
@@ -24,12 +25,12 @@ where
     SESSION_GLOBALS.with(f)
 }
 
-pub fn create_session_globals_then<R>(extra_symbols: &[&'static str], f: impl FnOnce() -> R) -> R {
+pub fn create_session_globals_then<R>(f: impl FnOnce() -> R) -> R {
     assert!(
         !SESSION_GLOBALS.is_set(),
         "SESSION_GLOBALS should never be overwritten! \
          Use another thread if you need another SessionGlobals"
     );
-    let session_globals = SessionGlobals::new(extra_symbols);
+    let session_globals = SessionGlobals::new();
     SESSION_GLOBALS.set(&session_globals, f)
 }

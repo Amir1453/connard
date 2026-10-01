@@ -1,4 +1,9 @@
-use std::{collections::HashMap, env, path::PathBuf, sync::LazyLock};
+use std::collections::HashMap;
+use std::env;
+use std::path::PathBuf;
+use std::sync::LazyLock;
+
+use crate::structs::ErrorAggregate;
 
 #[allow(dead_code)]
 pub enum MetaOptions {
@@ -49,54 +54,104 @@ pub struct CompilerOptions {
     pub warning_options: Vec<WarningOptions>,
     #[allow(dead_code)]
     pub cfg_instrumentation_options: Vec<CFGInstrumentationOptions>,
-
-    // Optional, to trigger single file mode
     pub out_path: Option<PathBuf>,
 }
 
 impl CompilerOptions {
-    pub fn from_env() -> Self {
+    pub fn from_env() -> Result<Self, ErrorAggregate<CompilerOptionsErrorType>> {
+        use CompilerOptionsErrorType::*;
+
         let mut compilation_units = Vec::new();
         let mut warning_options = Vec::new();
         let mut cfg_instrumentation_options = Vec::new();
+        let mut out_path = None;
 
-        for i in env::args().skip(1) {
-            if i.ends_with(".bx") {
-                compilation_units.push(PathBuf::from(i));
+        let mut errors = ErrorAggregate::<CompilerOptionsErrorType>::new();
+
+        let mut args = env::args().skip(1);
+        while let Some(arg) = args.next() {
+            if arg.ends_with(".bx") {
+                compilation_units.push(PathBuf::from(arg));
                 continue;
             }
 
-            if let Some(&opt) = WARNINGS.get(i.as_str()) {
+            if let Some(&opt) = WARNINGS.get(arg.as_str()) {
                 warning_options.push(opt);
                 continue;
             }
 
-            if let Some(&opt) = INST.get(i.as_str()) {
+            if let Some(&opt) = INST.get(arg.as_str()) {
                 cfg_instrumentation_options.push(opt);
                 continue;
             }
 
-            println!("Ignoring unrecognized option: {:?}", i);
+            if arg == "-o" {
+                let Some(output) = args.next() else {
+                    errors.add_error(OArgumentNotSpecified);
+                    continue;
+                };
+
+                if out_path.is_some() {
+                    errors.add_error(OArgumentDuplicated);
+                    continue;
+                }
+
+                if !output.ends_with(".s") {
+                    errors.add_error(OArgumentNotASM);
+                    continue;
+                }
+
+                out_path = Some(PathBuf::from(output));
+                continue;
+            }
+
+            errors.add_error(UnknownOption(arg.clone()));
         }
 
-        Self {
+        if compilation_units.is_empty() {
+            errors.add_error(EmptyInput);
+        }
+
+        if out_path.is_some() && compilation_units.len() > 1 {
+            errors.add_error(OArgumentTooManyCU);
+        }
+
+        if let Err(errors) = errors.resolve() {
+            return Err(errors);
+        }
+
+        Ok(Self {
             compilation_units,
             warning_options,
             cfg_instrumentation_options,
-            out_path: None,
-        }
+            out_path,
+        })
     }
 
-    pub fn from_singular(cu: &PathBuf, out_path: &PathBuf) -> Self {
+    pub fn from_paths(input: impl Into<PathBuf>, output: impl Into<PathBuf>) -> Self {
         Self {
-            compilation_units: vec![cu.to_path_buf()],
+            compilation_units: vec![input.into()],
             warning_options: Vec::new(),
             cfg_instrumentation_options: Vec::new(),
-            out_path: Some(out_path.to_path_buf()),
+            out_path: Some(output.into()),
         }
     }
+}
 
-    pub fn cu_is_empty(&self) -> bool {
-        self.compilation_units.is_empty()
-    }
+#[derive(thiserror::Error, Clone, Debug, PartialEq)]
+pub enum CompilerOptionsErrorType {
+    #[error("-o argument not specified")]
+    OArgumentNotSpecified,
+    #[error("-o argument must be an assembly file (.s)")]
+    OArgumentNotASM,
+    #[error("-o argument was provided too many times")]
+    OArgumentDuplicated,
+    #[error("cannot specify -o with multiple files")]
+    OArgumentTooManyCU,
+
+    #[error("no input files")]
+    EmptyInput,
+
+    #[error("unrecognized option: {0}")]
+    UnknownOption(String),
 }

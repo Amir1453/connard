@@ -4,7 +4,7 @@ all: build
 
 build:
 	cargo build --release
-	cp target/release/$(shell basename `pwd`) $(EXECUTABLE)
+	cp target/release/connard $(EXECUTABLE)
 
 clean:
 	cargo clean

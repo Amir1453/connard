@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::ir::BasicBlocks;
 use crate::ir::tac::{CUTAC, TACDeclaration};
 use crate::optimizer::cfg::CFG;
