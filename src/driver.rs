@@ -3,15 +3,12 @@ use std::path::PathBuf;
 
 use anyhow::{Context, bail};
 
+use crate::backend::Asm;
 use crate::frontend::ast::{Declaration, Program};
 use crate::frontend::{BXParser, Lexer, RetChecker, SemChecker, TypeChecker};
-
+use crate::globals;
 use crate::ir::MM;
-
 use crate::optimizer::Optimizer;
-
-use crate::backend::Asm;
-
 use crate::options::CompilerOptions;
 use crate::types::{Name, ProcType, SemanticType};
 
@@ -35,6 +32,8 @@ impl Driver {
     }
 
     fn compile(options: CompilerOptions) -> anyhow::Result<()> {
+        // globals::create_session_globals_then(&[], || {});
+
         // Generate the parser
         let parser = BXParser::new();
 
