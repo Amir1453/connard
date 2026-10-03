@@ -22,6 +22,7 @@
 // The following code was directly taken and/or inspired by the rustc/arena code.
 
 #![allow(dead_code)]
+#![allow(clippy::mut_from_ref)] // Arena allocators are one place where this pattern is fine.
 
 use std::alloc::Layout;
 use std::cell::{Cell, RefCell};

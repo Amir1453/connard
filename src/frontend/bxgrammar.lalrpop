@@ -1,6 +1,7 @@
 use crate::frontend::ast;
+use crate::frontend::Symbol;
 use crate::frontend::tokens::{Token, LexicalError};
-use crate::types::{Name, Type};
+use crate::types::Type;
 
 grammar;
 
@@ -24,7 +25,7 @@ extern {
     "CONTINUE" => Token::KeywordContinue,
     "TRUE" => Token::KeywordTrue,
     "FALSE" => Token::KeywordFalse,
-    "IDENT" => Token::Identifier(<Name>),
+    "IDENT" => Token::Identifier(<Symbol>),
     "NUMBER" => Token::Number(<i64>),
     "," => Token::Comma,
     "(" => Token::LParen,
@@ -77,14 +78,14 @@ Declaration: ast::Declaration = {
 
 VarDeclGlobal: ast::Variable = {
   "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
-    let (mut names, mut values): (Vec<Name>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+    let (mut names, mut values): (Vec<Symbol>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
     names.insert(0, name);
     values.insert(0, value);
     ast::Variable {names, values, ty, scope: ast::ScopeState::Global}
   }
 }
 
-ProcArgs: Vec<(Name, Type)> = {
+ProcArgs: Vec<(Symbol, Type)> = {
   <arg:"IDENT"> ":" <ty:Type> <mut arg_type_pair:("," <"IDENT"> ":" <Type>)*> => {
     arg_type_pair.insert(0, (arg, ty));
     arg_type_pair
@@ -123,7 +124,7 @@ Statement: ast::Statement = {
 
 VarDeclLocal: ast::Variable = {
   "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
-    let (mut names, mut values): (Vec<Name>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+    let (mut names, mut values): (Vec<Symbol>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
     names.insert(0, name);
     values.insert(0, value);
     ast::Variable {names, values, ty, scope: ast::ScopeState::Local}

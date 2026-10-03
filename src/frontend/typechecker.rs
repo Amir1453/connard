@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
-use crate::frontend::ast::*;
+use crate::frontend::{Symbol, ast::*};
 use crate::structs::{ErrorAggregate, Stack};
-use crate::types::{Name, ProcType, SemanticType, Span, Type};
+use crate::types::{ProcType, SemanticType, Span, Type};
 
 // #[derive(Clone, PartialEq)]
 pub struct TypeChecker {
-    scopes: Stack<HashMap<Name, SemanticType>>,
-    current_proc_name: Name,
+    scopes: Stack<HashMap<Symbol, SemanticType>>,
+    current_proc_name: Option<Symbol>,
     errors: ErrorAggregate<TypeErrorType>,
 }
 
@@ -16,14 +16,14 @@ impl TypeChecker {
     fn new() -> Self {
         Self {
             scopes: Stack::new(),
-            current_proc_name: Name::with_capacity(50),
+            current_proc_name: None,
             errors: ErrorAggregate::new(),
         }
     }
 
     pub fn check(
         program: &mut Program,
-        global_decls: HashMap<Name, SemanticType>,
+        global_decls: HashMap<Symbol, SemanticType>,
     ) -> Result<(), ErrorAggregate<TypeErrorType>> {
         let mut tc = TypeChecker::new();
         tc.scopes.push(global_decls);
@@ -40,7 +40,7 @@ impl TypeChecker {
                     proc_args,
                     ..
                 } => {
-                    self.current_proc_name = proc_name.clone();
+                    self.current_proc_name = Some(proc_name.clone());
                     self.scopes.push(HashMap::new());
 
                     for (name, ty) in proc_args.iter_mut().flatten() {
@@ -50,7 +50,7 @@ impl TypeChecker {
                     self.check_block(block);
 
                     self.scopes.pop();
-                    self.current_proc_name.clear();
+                    self.current_proc_name = None;
                 }
 
                 Declaration::Variable(var) => self.check_global_variable(var),
@@ -97,7 +97,7 @@ impl TypeChecker {
             Statement::Eval(expr) => self.check_expression(expr),
 
             Statement::Return(expr) => {
-                match self.find_proc_type(&self.current_proc_name).return_type {
+                match self.find_proc_type(&self.current_proc_name.unwrap()).return_type {
                     Some(expected) => {
                         if let Some(exp) = expr {
                             self.check_expression(exp);
@@ -209,6 +209,7 @@ impl TypeChecker {
                     _ => {}
                 }
             }
+
             Expression::BinaryOperation {
                 lhs,
                 operator,
@@ -262,12 +263,13 @@ impl TypeChecker {
                 };
                 *ty = exp_type;
             }
+
             Expression::ProcCall {
                 proc_name,
                 proc_args,
                 ty,
             } => {
-                if proc_name == "print" {
+                if proc_name.as_str() == "print" {
                     let arg = proc_args.as_mut().unwrap().first_mut().unwrap();
                     self.check_expression(arg);
                     let arg_type = arg.get_type();
@@ -300,7 +302,7 @@ impl TypeChecker {
 
     // Stack helpers
 
-    pub fn current_scope_insert_simple(&mut self, name: Name, ty: Type) {
+    pub fn current_scope_insert_simple(&mut self, name: Symbol, ty: Type) {
         if let Some(current) = self.scopes.top_mut() {
             current.insert(name, SemanticType::SimpleType(ty));
         }
@@ -309,8 +311,8 @@ impl TypeChecker {
     #[allow(dead_code)]
     pub fn current_scope_insert_proc(
         &mut self,
-        name: Name,
-        args_type: Option<Vec<(Name, Type)>>,
+        name: Symbol,
+        args_type: Option<Vec<(Symbol, Type)>>,
         return_type: Option<Type>,
     ) {
         if let Some(current) = self.scopes.top_mut() {
@@ -324,7 +326,7 @@ impl TypeChecker {
         }
     }
 
-    pub fn find_simple_type(&self, name: &str) -> Type {
+    pub fn find_simple_type(&self, name: &Symbol) -> Type {
         for s in self.scopes.iter().rev() {
             if let Some(t) = s.get(name)
                 && let SemanticType::SimpleType(ty) = t
@@ -335,7 +337,7 @@ impl TypeChecker {
         Type::Error
     }
 
-    pub fn find_proc_type(&self, name: &str) -> ProcType {
+    pub fn find_proc_type(&self, name: &Symbol) -> ProcType {
         for s in self.scopes.iter().rev() {
             if let Some(t) = s.get(name)
                 && let SemanticType::ProcType(pt) = t
@@ -388,6 +390,6 @@ pub enum TypeErrorType {
     ReturnValueMissing,
     #[error("Return type is mismatching")]
     ReturnTypeMismatch,
-    #[error("Idk")]
+    #[error("Return type should be void")]
     ReturnTypeMismatchSub,
 }

@@ -1,20 +1,19 @@
 use std::collections::HashMap;
 
-use crate::frontend::ast::*;
+use crate::frontend::{Symbol, ast::*};
 use crate::ir::tac::*;
-
 use crate::structs::Stack;
-use crate::types::{Name, Type};
+use crate::types::Type;
 
 pub struct MM {
     cutac: CUTAC,
     proc_instructions: InstBlock,
 
-    vars: Stack<HashMap<Name, TACTemp>>,
+    vars: Stack<HashMap<Symbol, TACTemp>>,
     loop_stack: Stack<(Label, Label)>,
 
-    temp_counter: i64,
-    label_counter: i64,
+    temp_counter: i32,
+    label_counter: i32,
 }
 
 impl MM {
@@ -51,7 +50,7 @@ impl MM {
                 } => {
                     self.vars.push(HashMap::new());
 
-                    let arguments: Option<Vec<Name>> =
+                    let arguments: Option<Vec<Symbol>> =
                         proc_args.map(|args| args.into_iter().map(|(name, _ty)| name).collect());
 
                     arguments.iter().flat_map(|v| v.iter()).for_each(|name| {
@@ -61,7 +60,8 @@ impl MM {
                     self.munch_block(*block);
                     let mut instructions = std::mem::take(&mut self.proc_instructions);
 
-                    let ret_label = Label::Named(format!("ret_{proc_name}").into());
+                    let ret_label_sym = Symbol::intern(&format!("ret_{proc_name}"));
+                    let ret_label = Label::Named(ret_label_sym);
 
                     if return_type.is_some() {
                         let ret_temp = self.fresh_temp();
@@ -336,18 +336,18 @@ impl MM {
                     }
 
                     let result = self.fresh_temp();
-                    if proc_name == "print" {
+                    if proc_name.as_str() == "print" {
                         match first_exp_type {
                             Type::Int => {
                                 self.emit(ProcCall {
-                                    proc_name: Name::from("__print_int"),
+                                    proc_name: Symbol::intern("__print_int"),
                                     arg_count,
                                     result: result.clone(),
                                 });
                             }
                             Type::Bool => {
                                 self.emit(ProcCall {
-                                    proc_name: Name::from("__print_bool"),
+                                    proc_name: Symbol::intern("__print_bool"),
                                     arg_count,
                                     result: result.clone(),
                                 });
@@ -501,17 +501,13 @@ impl MM {
 
     // Stack helpers
 
-    pub fn current_vars_insert(&mut self, name: Name, temp: TACTemp) {
+    pub fn current_vars_insert(&mut self, name: Symbol, temp: TACTemp) {
         if let Some(current) = self.vars.top_mut() {
             current.insert(name, temp);
         }
     }
 
-    // pub fn current_var_get(&self, name: &Name) -> TACTemp {
-    //     self.vars.top().unwrap()[name].clone()
-    // }
-
-    pub fn current_var_get(&self, name: &Name) -> TACTemp {
+    pub fn current_var_get(&self, name: &Symbol) -> TACTemp {
         for scope in self.vars.iter().rev() {
             if let Some(t) = scope.get(name) {
                 return t.clone();

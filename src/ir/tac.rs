@@ -1,8 +1,9 @@
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
+use crate::frontend::Symbol;
 use crate::frontend::ast::Operator;
-use crate::types::{Name, Type};
+use crate::types::Type;
 
 #[derive(Clone, Hash, PartialEq)]
 pub struct CUTAC(pub Vec<TACDeclaration>);
@@ -15,14 +16,14 @@ pub enum TACDeclaration {
 
 #[derive(Clone, Hash, PartialEq)]
 pub struct GlobalVarDecl {
-    pub name: Name,
+    pub name: Symbol,
     pub value: i64,
 }
 
 #[derive(Clone, Hash, PartialEq)]
 pub struct ProcDecl {
-    pub name: Name,
-    pub arguments: Option<Vec<Name>>,
+    pub name: Symbol,
+    pub arguments: Option<Vec<Symbol>>,
     pub instructions: InstBlock,
 }
 
@@ -69,7 +70,7 @@ pub enum TACInst {
     },
 
     ProcCall {
-        proc_name: Name,
+        proc_name: Symbol,
         arg_count: usize,
         result: TACTemp,
     },
@@ -82,15 +83,15 @@ pub enum TACInst {
 
 #[derive(Clone, Hash, PartialEq)]
 pub enum TACTemp {
-    Temp(i64),
-    NamedTemp(Name),
-    GlobalVar(Name),
+    Temp(i32),
+    NamedTemp(Symbol),
+    GlobalVar(Symbol),
 }
 
 #[derive(Clone, PartialEq, Hash, Eq)]
 pub enum Label {
-    Numeric(i64),
-    Named(Name),
+    Numeric(i32),
+    Named(Symbol),
 }
 
 #[derive(Copy, Clone, Hash, PartialEq)]
@@ -177,7 +178,7 @@ impl fmt::Display for TACDeclaration {
 }
 
 impl GlobalVarDecl {
-    pub fn new(name: Name, value: i64) -> Self {
+    pub fn new(name: Symbol, value: i64) -> Self {
         Self { name, value }
     }
 }
@@ -189,7 +190,7 @@ impl fmt::Display for GlobalVarDecl {
 }
 
 impl ProcDecl {
-    pub fn new(name: Name, arguments: Option<Vec<Name>>, instructions: InstBlock) -> Self {
+    pub fn new(name: Symbol, arguments: Option<Vec<Symbol>>, instructions: InstBlock) -> Self {
         Self {
             name,
             arguments,

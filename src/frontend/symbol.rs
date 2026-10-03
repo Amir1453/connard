@@ -100,6 +100,7 @@ struct InternerInner {
     arena: DroplessArena,
     indices: HashTable<(&'static [u8], u32)>,
     byte_strs: Vec<&'static [u8]>,
+    hasher: hashbrown::DefaultHashBuilder,
 }
 
 impl Interner {
@@ -108,6 +109,7 @@ impl Interner {
             arena: Default::default(),
             indices: Default::default(),
             byte_strs: Default::default(),
+            hasher: Default::default(),
         };
 
         Self(parking_lot::Mutex::new(inner))
@@ -130,16 +132,16 @@ impl Interner {
 
     #[inline]
     fn intern_inner(&self, byte_str: &[u8]) -> u32 {
-        let hasher = hashbrown::DefaultHashBuilder::default();
-        let hash_of_byte_str = hasher.hash_one(byte_str);
-
         let mut inner = self.0.lock();
 
         let InternerInner {
             arena,
             indices,
             byte_strs,
+            hasher,
         } = &mut *inner;
+
+        let hash_of_byte_str = hasher.hash_one(byte_str);
 
         match indices.entry(
             hash_of_byte_str,

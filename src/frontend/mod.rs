@@ -14,4 +14,5 @@ pub use lexer::Lexer;
 pub use retchecker::RetChecker;
 pub use semchecker::SemChecker;
 pub use symbol::Interner;
+pub use symbol::Symbol;
 pub use typechecker::TypeChecker;

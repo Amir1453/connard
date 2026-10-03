@@ -1,9 +1,9 @@
-use compact_str::ToCompactString;
 use logos::Logos;
+
 use std::fmt;
 use std::num::ParseIntError;
 
-use crate::types::Name;
+use crate::frontend::Symbol;
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexicalError {
@@ -57,8 +57,8 @@ pub enum Token {
     #[token("false")]
     KeywordFalse,
 
-    #[regex("[_a-zA-Z][_0-9a-zA-Z]*", |lex| lex.slice().to_compact_string())]
-    Identifier(Name),
+    #[regex("[_a-zA-Z][_0-9a-zA-Z]*", |lex| Symbol::intern(lex.slice()))]
+    Identifier(Symbol),
     #[regex("-?[0-9]*", |lex| lex.slice().parse())]
     Number(i64),
 

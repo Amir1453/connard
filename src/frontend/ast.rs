@@ -1,4 +1,5 @@
-use crate::types::{Name, Promise, Type};
+use super::Symbol;
+use crate::types::{Promise, Type};
 
 pub struct Program(pub Vec<Declaration>);
 
@@ -6,15 +7,15 @@ pub enum Declaration {
     Variable(Box<Variable>),
 
     Proc {
-        proc_name: Name,
-        proc_args: Option<Vec<(Name, Type)>>,
+        proc_name: Symbol,
+        proc_args: Option<Vec<(Symbol, Type)>>,
         return_type: Option<Type>,
         block: Box<Block>,
     },
 }
 
 pub struct Variable {
-    pub names: Vec<Name>,
+    pub names: Vec<Symbol>,
     pub values: Vec<Box<Expression>>,
     pub ty: Type,
     #[allow(unused)]
@@ -29,7 +30,7 @@ pub enum Statement {
     Block(Box<Block>),
 
     Assignment {
-        name: Name,
+        name: Symbol,
         value: Box<Expression>,
     },
 
@@ -52,7 +53,7 @@ pub enum Statement {
 }
 
 pub enum Expression {
-    Variable(Name, Promise<Type>),
+    Variable(Symbol, Promise<Type>),
     Number(i64),
     Bool(bool),
 
@@ -70,7 +71,7 @@ pub enum Expression {
     },
 
     ProcCall {
-        proc_name: Name,
+        proc_name: Symbol,
         proc_args: Option<Vec<Box<Expression>>>,
         ty: Promise<Type>,
     },

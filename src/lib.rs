@@ -1,7 +1,7 @@
 mod backend;
 mod frontend;
 mod ir;
-mod optimizer;
+mod opt;
 
 mod globals;
 mod structs;

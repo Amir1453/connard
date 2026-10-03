@@ -1,4 +1,5 @@
 // The following code was directly taken and/or inspired by the rustc/arena code.
+
 pub struct SessionGlobals {
     symbol_interner: crate::frontend::Interner,
 }

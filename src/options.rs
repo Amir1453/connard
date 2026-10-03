@@ -116,9 +116,7 @@ impl CompilerOptions {
             errors.add_error(OArgumentTooManyCU);
         }
 
-        if let Err(errors) = errors.resolve() {
-            return Err(errors);
-        }
+        errors.resolve()?;
 
         Ok(Self {
             compilation_units,

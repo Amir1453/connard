@@ -5,12 +5,12 @@ use anyhow::bail;
 
 use crate::backend::Asm;
 use crate::frontend::ast::{Declaration, Program};
-use crate::frontend::{BXParser, Lexer, RetChecker, SemChecker, TypeChecker};
+use crate::frontend::{BXParser, Lexer, RetChecker, SemChecker, Symbol, TypeChecker};
 use crate::globals;
 use crate::ir::MM;
-use crate::optimizer::Optimizer;
+use crate::opt::Optimizer;
 use crate::options::CompilerOptions;
-use crate::types::{Name, ProcType, SemanticType};
+use crate::types::{ProcType, SemanticType};
 
 pub struct Driver {}
 
@@ -31,8 +31,12 @@ impl Driver {
     }
 
     /// All entrances are done through here, where we create the session globals.
+    /// An Error might contain a Symbol that is only meaningful when the session globals exist.
+    /// This case must be handled.
     fn entrypoint(options: CompilerOptions) -> anyhow::Result<()> {
-        globals::create_session_globals_then(|| Driver::compile(options))
+        globals::create_session_globals_then(|| {
+            Driver::compile(options).map_err(|error| anyhow::anyhow!("{error:#}"))
+        })
     }
 
     /// The main compilation pipeline of the compiler, lexing, parsing, semantic checking, type
@@ -51,9 +55,10 @@ impl Driver {
             cu_programs.push((cu, cu_program));
         }
 
-        let mut global_decls: HashMap<Name, SemanticType> = HashMap::new();
+        let mut global_decls: HashMap<Symbol, SemanticType> = HashMap::new();
 
-        let mut insert_global_decl = |name: Name, ty: SemanticType| match global_decls.entry(name) {
+        let mut insert_global_decl = |name: Symbol, ty: SemanticType| match global_decls.entry(name)
+        {
             Entry::Vacant(entry) => {
                 entry.insert(ty);
                 Ok(())
@@ -84,15 +89,16 @@ impl Driver {
                             args_type: proc_args.clone(),
                             return_type: *return_type,
                         });
-                        insert_global_decl(proc_name.clone(), ty)?
+                        insert_global_decl(*proc_name, ty)?
                     }
                 }
             }
         }
 
         // Making sure a main function exists
-        if !(global_decls.contains_key("main")
-            && matches!(global_decls.get("main"), Some(SemanticType::ProcType(_))))
+        let main_sym = Symbol::intern("main");
+        if !(global_decls.contains_key(&main_sym)
+            && matches!(global_decls.get(&main_sym), Some(SemanticType::ProcType(_))))
         {
             bail!("No main() ! Maybe I am a linker ?")
         }

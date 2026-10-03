@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use std::iter::zip;
 
-use crate::frontend::ast::*;
+use crate::frontend::{Symbol, ast::*};
 use crate::structs::{ErrorAggregate, Stack};
-use crate::types::{Name, Span};
+use crate::types::Span;
 
 pub struct SemChecker {
-    scopes: Stack<HashSet<Name>>,
+    scopes: Stack<HashSet<Symbol>>,
     errors: ErrorAggregate<SyntaxErrorType>,
     loop_depth: usize,
 }
@@ -22,11 +22,11 @@ impl SemChecker {
 
     pub fn check(
         program: &Program,
-        global_decls: HashSet<Name>,
+        global_decls: HashSet<Symbol>,
     ) -> Result<(), ErrorAggregate<SyntaxErrorType>> {
         let mut sc = SemChecker::new();
         sc.scopes.push(global_decls);
-        sc.current_scope_insert(Name::from("print"));
+        sc.current_scope_insert(Symbol::intern("print"));
 
         sc.check_program(program);
         sc.errors.resolve()
@@ -170,7 +170,7 @@ impl SemChecker {
         }
     }
 
-    fn check_non_declared(&mut self, name: &Name) {
+    fn check_non_declared(&mut self, name: &Symbol) {
         if self.current_scope_contains(name) {
             self.collect_error(SyntaxErrorType::DuplicateVariable, None);
         } else {
@@ -178,7 +178,7 @@ impl SemChecker {
         }
     }
 
-    fn check_declared(&mut self, name: &Name) {
+    fn check_declared(&mut self, name: &Symbol) {
         if !(self.any_scope_contains(name)) {
             self.collect_error(SyntaxErrorType::MissingVariable, None);
         }
@@ -186,17 +186,17 @@ impl SemChecker {
 
     // Stack Helper functions
 
-    fn current_scope_contains(&mut self, name: &Name) -> bool {
+    fn current_scope_contains(&mut self, name: &Symbol) -> bool {
         self.scopes.top().is_some_and(|s| s.contains(name))
     }
 
-    fn current_scope_insert(&mut self, name: Name) {
+    fn current_scope_insert(&mut self, name: Symbol) {
         if let Some(current) = self.scopes.top_mut() {
             current.insert(name);
         }
     }
 
-    pub fn any_scope_contains(&self, name: &str) -> bool {
+    pub fn any_scope_contains(&self, name: &Symbol) -> bool {
         for s in self.scopes.iter().rev() {
             if s.contains(name) {
                 return true;

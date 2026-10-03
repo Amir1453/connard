@@ -1,3 +1,6 @@
+// The following code is absolutely garbage for the time being.
+// And update is direly needed. What are those CompactStrings everywhere ??
+
 use compact_str::CompactString;
 use std::collections::HashMap;
 
@@ -7,7 +10,7 @@ use crate::types::Name;
 pub struct Asm {
     var_asm: Vec<CompactString>,
     asm: Vec<CompactString>,
-    temps: HashMap<i64, usize>,
+    temps: HashMap<i32, usize>,
     named: HashMap<CompactString, usize>,
     tparams: HashMap<CompactString, usize>,
     params: Vec<TACTemp>,
@@ -72,6 +75,7 @@ impl Asm {
 
         if let Some(args) = &proc.arguments {
             for (i, arg) in args.iter().enumerate().take(6) {
+                let arg = CompactString::from(arg.as_str());
                 let slot = self.alloc_named_temp(arg.clone());
                 emit_body(
                     &format!("\tmovq\t{}, {}", param_regs[i], self.format_temp_slot(slot)),
@@ -79,6 +83,7 @@ impl Asm {
                 );
             }
             for (i, arg) in args.iter().enumerate().skip(6) {
+                let arg = CompactString::from(arg.as_str());
                 self.tparams.insert(arg.clone(), i - 6);
             }
         }
@@ -295,7 +300,7 @@ impl Asm {
                     self.emit(format!("\taddq\t${}, %rsp", restore * 8));
                 }
 
-                // result is a TACTemp (per your TAC)
+                // result is a TACTemp
                 let dst = self.temp_for(result);
                 self.emit(format!("\tmovq\t%rax, {}", dst));
 
@@ -341,7 +346,7 @@ impl Asm {
                 }
             }
             TACTemp::NamedTemp(name) => {
-                let k = name;
+                let k = CompactString::from(name.as_str());
                 if let Some(&s) = self.named.get(&k) {
                     self.format_temp_slot(s)
                 } else if let Some(&sp) = self.tparams.get(&k) {

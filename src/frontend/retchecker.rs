@@ -1,6 +1,7 @@
+use compact_str::CompactString;
+
 use crate::frontend::ast::{Block, Program, Statement};
 use crate::structs::ErrorAggregate;
-use crate::types::Name;
 
 pub struct RetChecker {}
 
@@ -13,12 +14,12 @@ impl RetChecker {
                 proc_name, block, ..
             } = decl
             {
-                if proc_name == "main" {
+                if proc_name.as_str() == "main" {
                     continue;
                 }
 
                 if !Self::check_block(block) {
-                    errors.add_error(NoReturnError(proc_name.clone()));
+                    errors.add_error(NoReturnError(proc_name.as_str().into()));
                 }
             }
         }
@@ -58,4 +59,4 @@ impl RetChecker {
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq)]
 #[error("function {0} does not return")]
-pub struct NoReturnError(Name);
+pub struct NoReturnError(CompactString);

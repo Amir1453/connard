@@ -1,20 +1,18 @@
-use compact_str::CompactString;
-
+use crate::frontend::Symbol;
 use crate::ir::tac::{InstBlock, Label, ProcDecl, TACInst};
-use crate::types::Name;
 
 pub struct BasicBlocks {
     pub blocks: Vec<BasicBlock>,
     pub block_index: i64,
-    pub proc_name: Name,
-    pub arguments: Option<Vec<Name>>,
+    pub proc_name: Symbol,
+    pub arguments: Option<Vec<Symbol>>,
 }
 
 impl BasicBlocks {
     fn empty() -> Self {
         Self {
             blocks: Vec::new(),
-            proc_name: CompactString::new(""),
+            proc_name: Symbol::intern("a"),
             arguments: None,
             block_index: -1,
         }
@@ -41,7 +39,8 @@ impl From<ProcDecl> for BasicBlocks {
         let mut counter: i64 = 0;
         let mut fresh_label = || -> Label {
             counter += 1;
-            Label::Named(format!("B{}", counter).into())
+            let label_sym = Symbol::intern(&format!("B{}", counter));
+            Label::Named(label_sym)
         };
 
         let mut basic_blocks: BasicBlocks = BasicBlocks::empty();
@@ -59,7 +58,7 @@ impl From<ProcDecl> for BasicBlocks {
             }
 
             Some(inst) => {
-                let title = format!("{}_entry", proc.name).into();
+                let title = Symbol::intern(&format!("{}_entry", proc.name));
                 basic_blocks.push_block(Label::Named(title));
                 basic_blocks.push_instruction_last_block(inst);
             }

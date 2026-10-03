@@ -1,6 +1,7 @@
 use crate::ir::BasicBlocks;
 use crate::ir::tac::{CUTAC, TACDeclaration};
-use crate::optimizer::cfg::CFG;
+
+use super::cfg::CFG;
 
 pub struct Optimizer {}
 

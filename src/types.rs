@@ -1,5 +1,7 @@
 use compact_str::CompactString;
 
+use crate::frontend::Symbol;
+
 pub type Span = (usize, usize);
 
 pub type Name = CompactString;
@@ -20,7 +22,7 @@ pub enum Type {
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ProcType {
-    pub args_type: Option<Vec<(Name, Type)>>,
+    pub args_type: Option<Vec<(Symbol, Type)>>,
     pub return_type: Option<Type>,
 }
 
