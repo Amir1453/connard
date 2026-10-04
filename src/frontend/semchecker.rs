@@ -43,7 +43,7 @@ impl SemChecker {
                     self.scopes.push(HashSet::new());
                     if let Some(args) = proc_args {
                         args.iter()
-                            .for_each(|(name, _)| self.current_scope_insert(name.clone()));
+                            .for_each(|(name, _)| self.current_scope_insert(*name));
                     }
 
                     self.check_block(block);
@@ -174,7 +174,7 @@ impl SemChecker {
         if self.current_scope_contains(name) {
             self.collect_error(SyntaxErrorType::DuplicateVariable, None);
         } else {
-            self.current_scope_insert(name.clone());
+            self.current_scope_insert(*name);
         }
     }
 

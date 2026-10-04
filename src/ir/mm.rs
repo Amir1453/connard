@@ -54,7 +54,7 @@ impl MM {
                         proc_args.map(|args| args.into_iter().map(|(name, _ty)| name).collect());
 
                     arguments.iter().flat_map(|v| v.iter()).for_each(|name| {
-                        self.current_vars_insert(name.clone(), TACTemp::NamedTemp(name.clone()))
+                        self.current_vars_insert(*name, TACTemp::NamedTemp(*name))
                     });
 
                     self.munch_block(*block);
@@ -113,10 +113,10 @@ impl MM {
                 Expression::Bool(boo) => boo.into(),
                 _ => -42,
             };
-            let global = GlobalVarDecl::new(name.clone(), value);
+            let global = GlobalVarDecl::new(name, value);
             self.cutac.push(TACDeclaration::GlobalVarDecl(global));
 
-            self.current_vars_insert(name.clone(), TACTemp::GlobalVar(name));
+            self.current_vars_insert(name, TACTemp::GlobalVar(name));
         }
     }
 
@@ -513,7 +513,7 @@ impl MM {
                 return t.clone();
             }
         }
-        TACTemp::GlobalVar(name.clone())
+        TACTemp::GlobalVar(*name)
         // panic!("undefined variable {:?}", name);
     }
 }

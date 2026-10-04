@@ -40,11 +40,11 @@ impl TypeChecker {
                     proc_args,
                     ..
                 } => {
-                    self.current_proc_name = Some(proc_name.clone());
+                    self.current_proc_name = Some(*proc_name);
                     self.scopes.push(HashMap::new());
 
                     for (name, ty) in proc_args.iter_mut().flatten() {
-                        self.current_scope_insert_simple(name.clone(), *ty);
+                        self.current_scope_insert_simple(*name, *ty);
                     }
 
                     self.check_block(block);
@@ -161,7 +161,7 @@ impl TypeChecker {
                 self.collect_error(TypeErrorType::TypeMismatchDecl, None);
             }
 
-            self.current_scope_insert_simple(name.clone(), value_type);
+            self.current_scope_insert_simple(*name, value_type);
         }
     }
 

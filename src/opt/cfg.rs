@@ -341,15 +341,15 @@ impl From<ProcDecl> for CFG {
     }
 }
 
-impl Into<ProcDecl> for CFG {
-    fn into(mut self) -> ProcDecl {
+impl From<CFG> for ProcDecl {
+    fn from(mut val: CFG) -> Self {
         let mut schedule: InstBlock = Vec::new();
-        let mut schedule_order: Vec<NodeIndex> = Vec::with_capacity(self.graph.node_count());
+        let mut schedule_order: Vec<NodeIndex> = Vec::with_capacity(val.graph.node_count());
 
-        let name = self.name;
-        let arguments = self.arguments;
+        let name = val.name;
+        let arguments = val.arguments;
 
-        let Some(entry) = self.graph.node_indices().next() else {
+        let Some(entry) = val.graph.node_indices().next() else {
             return ProcDecl {
                 name,
                 arguments,
@@ -357,14 +357,14 @@ impl Into<ProcDecl> for CFG {
             };
         };
 
-        let mut bfs = Bfs::new(&self.graph, entry);
+        let mut bfs = Bfs::new(&val.graph, entry);
 
-        while let Some(nx) = bfs.next(&self.graph) {
+        while let Some(nx) = bfs.next(&val.graph) {
             schedule_order.push(nx);
         }
 
         for index in schedule_order {
-            let Some(block) = self.graph.remove_node(index) else {
+            let Some(block) = val.graph.remove_node(index) else {
                 continue;
             };
 
@@ -374,7 +374,7 @@ impl Into<ProcDecl> for CFG {
             }
         }
 
-        self.graph.clear();
+        val.graph.clear();
 
         ProcDecl {
             name,
