@@ -1,4 +1,5 @@
 use compact_str::CompactString;
+use thin_vec::ThinVec;
 
 use crate::frontend::Symbol;
 
@@ -22,7 +23,7 @@ pub enum Type {
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct ProcType {
-    pub args_type: Option<Vec<(Symbol, Type)>>,
+    pub args_type: Option<ThinVec<(Symbol, Type)>>,
     pub return_type: Option<Type>,
 }
 

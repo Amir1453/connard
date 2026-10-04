@@ -3,6 +3,8 @@ use crate::frontend::Symbol;
 use crate::frontend::tokens::{Token, LexicalError};
 use crate::types::Type;
 
+use thin_vec::{thin_vec, ThinVec};
+
 grammar;
 
 // ...
@@ -58,6 +60,19 @@ extern {
   }
 }
 
+Star<T>: ThinVec<T> = {
+    => ThinVec::new(),
+    <items:Plus<T>> => items,
+};
+
+Plus<T>: ThinVec<T> = {
+    <item:T> => thin_vec![item],
+
+    <mut items:Plus<T>> <item:T> => {
+        items.push(item);
+        items
+    },
+};
 
 pub BX: ast::Program = {
   <decls:Declaration*> => ast::Program(decls)
@@ -66,9 +81,9 @@ pub BX: ast::Program = {
 Declaration: ast::Declaration = {
   <var_decl:VarDeclGlobal> => ast::Declaration::Variable(Box::new(var_decl)),
 
-  "DEF" <proc_name:"IDENT"> "(" <proc_args:ProcArgs?> ")" <return_type:(":" <Type>)?> "{" <stmts:Statement*> "}"  => {
+  "DEF" <proc_name:"IDENT"> "(" <proc_args:ProcArgs?> ")" <return_type:(":" <Type>)?> "{" <stmts:Star<Statement>> "}"  => {
     ast::Declaration::Proc {
-      proc_name: proc_name.into(),
+      proc_name,
       proc_args,
       return_type,
       block: Box::new(ast::Block(stmts)),
@@ -77,16 +92,16 @@ Declaration: ast::Declaration = {
 }
 
 VarDeclGlobal: ast::Variable = {
-  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
-    let (mut names, mut values): (Vec<Symbol>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:Star<("," <"IDENT"> "=" <Expression>)>> ":" <ty:Type> ";" => {
+    let (mut names, mut values): (ThinVec<Symbol>, ThinVec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
     names.insert(0, name);
     values.insert(0, value);
     ast::Variable {names, values, ty, scope: ast::ScopeState::Global}
   }
 }
 
-ProcArgs: Vec<(Symbol, Type)> = {
-  <arg:"IDENT"> ":" <ty:Type> <mut arg_type_pair:("," <"IDENT"> ":" <Type>)*> => {
+ProcArgs: ThinVec<(Symbol, Type)> = {
+  <arg:"IDENT"> ":" <ty:Type> <mut arg_type_pair:Star<("," <"IDENT"> ":" <Type>)>> => {
     arg_type_pair.insert(0, (arg, ty));
     arg_type_pair
   }
@@ -109,11 +124,11 @@ Statement: ast::Statement = {
 
   "RETURN" <expr:Expression?> ";" => ast::Statement::Return(expr),
 
-  "{" <stmts:Statement*> "}" => ast::Statement::Block(Box::new(ast::Block(stmts))),
+  "{" <stmts:Star<Statement>> "}" => ast::Statement::Block(Box::new(ast::Block(stmts))),
 
   <ifelse:IFElse> => ifelse,
 
-  "WHILE" "(" <condition:Expression> ")" "{" <stmts:Statement*> "}" => {
+  "WHILE" "(" <condition:Expression> ")" "{" <stmts:Star<Statement>> "}" => {
     ast::Statement::While { condition, block: Box::new(ast::Block(stmts)) }
   },
 
@@ -123,8 +138,8 @@ Statement: ast::Statement = {
 }
 
 VarDeclLocal: ast::Variable = {
-  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:("," <"IDENT"> "=" <Expression>)*> ":" <ty:Type> ";" => {
-    let (mut names, mut values): (Vec<Symbol>, Vec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
+  "VAR" <name:"IDENT"> "=" <value:Expression> <name_value_pair:Star<("," <"IDENT"> "=" <Expression>)>> ":" <ty:Type> ";" => {
+    let (mut names, mut values): (ThinVec<Symbol>, ThinVec<Box<ast::Expression>>) = name_value_pair.into_iter().unzip();
     names.insert(0, name);
     values.insert(0, value);
     ast::Variable {names, values, ty, scope: ast::ScopeState::Local}
@@ -132,7 +147,7 @@ VarDeclLocal: ast::Variable = {
 }
 
 IFElse: ast::Statement = {
-  "IF" "(" <condition:Expression> ")" "{" <then_block:Statement*> "}" <ifrest:IFRest> => {
+  "IF" "(" <condition:Expression> ")" "{" <then_block:Star<Statement>> "}" <ifrest:IFRest> => {
     ast::Statement::If {
       condition,
       then_block: Box::new(ast::Block(then_block)),
@@ -142,7 +157,7 @@ IFElse: ast::Statement = {
 }
 
 IFRest: Option<Box<ast::Statement>> = {
-    "ELSE" "{" <else_stmts:Statement*> "}" => {
+    "ELSE" "{" <else_stmts:Star<Statement>> "}" => {
         Some(Box::new(ast::Statement::Block(Box::new(ast::Block(else_stmts)))))
     },
 
@@ -378,11 +393,16 @@ Term: Box<ast::Expression> = {
 }
 
 ProcCall: Box<ast::Expression> = {
-  <proc_name:"IDENT"> "(" <proc_args:ProcCallArgs?> ")" => Box::new(ast::Expression::ProcCall {proc_name: proc_name.into(), proc_args, ty: None}),
+  <proc_name:"IDENT"> "(" <proc_args:ProcCallArgs?> ")" => Box::new(
+    ast::Expression::ProcCall {
+      proc_name: proc_name.into(), 
+      proc_args, 
+      ty: None
+    }),
 }
 
-ProcCallArgs: Vec<Box<ast::Expression>> = {
-  <arg:Expression> <mut args:("," <Expression>)*> => {
+ProcCallArgs: ThinVec<Box<ast::Expression>> = {
+  <arg:Expression> <mut args:Star<("," <Expression>)>> => {
     args.insert(0, arg);
     args
   }

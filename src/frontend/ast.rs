@@ -1,6 +1,8 @@
 use super::Symbol;
 use crate::types::{Promise, Type};
 
+use thin_vec::ThinVec;
+
 pub struct Program(pub Vec<Declaration>);
 
 pub enum Declaration {
@@ -8,21 +10,21 @@ pub enum Declaration {
 
     Proc {
         proc_name: Symbol,
-        proc_args: Option<Vec<(Symbol, Type)>>,
+        proc_args: Option<ThinVec<(Symbol, Type)>>,
         return_type: Option<Type>,
         block: Box<Block>,
     },
 }
 
 pub struct Variable {
-    pub names: Vec<Symbol>,
-    pub values: Vec<Box<Expression>>,
+    pub names: ThinVec<Symbol>,
+    pub values: ThinVec<Box<Expression>>,
     pub ty: Type,
     #[allow(unused)]
     pub scope: ScopeState,
 }
 
-pub struct Block(pub Vec<Statement>);
+pub struct Block(pub ThinVec<Statement>);
 
 pub enum Statement {
     Variable(Box<Variable>),
@@ -72,7 +74,7 @@ pub enum Expression {
 
     ProcCall {
         proc_name: Symbol,
-        proc_args: Option<Vec<Box<Expression>>>,
+        proc_args: Option<ThinVec<Box<Expression>>>,
         ty: Promise<Type>,
     },
 }

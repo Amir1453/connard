@@ -103,7 +103,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "compact_str",
- "flat_vec",
  "hashbrown 0.17.1",
  "lalrpop",
  "lalrpop-util",
@@ -111,6 +110,7 @@ dependencies = [
  "parking_lot",
  "petgraph 0.8.3",
  "scoped-tls",
+ "thin-vec",
  "thiserror",
 ]
 
@@ -169,12 +169,6 @@ name = "fixedbitset"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
-
-[[package]]
-name = "flat_vec"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b48317a912b620addec1d59ff775003329cb2007d945faac3dcf974c472c3de"
 
 [[package]]
 name = "fnv"
@@ -625,6 +619,12 @@ checksum = "d8c27177b12a6399ffc08b98f76f7c9a1f4fe9fc967c784c5a071fa8d93cf7e1"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "thin-vec"
+version = "0.2.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4568d7e143ec86d2021c338bae2afa88699e84b8e0af523626654fe6f03a1748"
 
 [[package]]
 name = "thiserror"

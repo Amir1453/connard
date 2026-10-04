@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::iter::zip;
 
+use thin_vec::ThinVec;
+
 use crate::frontend::{Symbol, ast::*};
 use crate::structs::{ErrorAggregate, Stack};
 use crate::types::{ProcType, SemanticType, Span, Type};
@@ -312,7 +314,7 @@ impl TypeChecker {
     pub fn current_scope_insert_proc(
         &mut self,
         name: Symbol,
-        args_type: Option<Vec<(Symbol, Type)>>,
+        args_type: Option<ThinVec<(Symbol, Type)>>,
         return_type: Option<Type>,
     ) {
         if let Some(current) = self.scopes.top_mut() {
