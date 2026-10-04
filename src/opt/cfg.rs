@@ -16,47 +16,6 @@ pub struct CFG {
 }
 
 impl CFG {
-    pub fn serialize_tac(mut self) -> ProcDecl {
-        let mut schedule: InstBlock = Vec::new();
-        let mut schedule_order: Vec<NodeIndex> = Vec::with_capacity(self.graph.node_count());
-
-        let name = self.name;
-        let arguments = self.arguments;
-
-        let Some(entry) = self.graph.node_indices().next() else {
-            return ProcDecl {
-                name,
-                arguments,
-                instructions: schedule,
-            };
-        };
-
-        let mut bfs = Bfs::new(&self.graph, entry);
-
-        while let Some(nx) = bfs.next(&self.graph) {
-            schedule_order.push(nx);
-        }
-
-        for index in schedule_order {
-            let Some(block) = self.graph.remove_node(index) else {
-                continue;
-            };
-
-            schedule.push(TACInst::LabelDecl(block.block_label));
-            for inst in block.instructions {
-                schedule.push(inst);
-            }
-        }
-
-        self.graph.clear();
-
-        ProcDecl {
-            name,
-            arguments,
-            instructions: schedule,
-        }
-    }
-
     pub fn remove_unreachable(&mut self) {
         let entry = match self.graph.node_indices().next() {
             Some(n) => n,
@@ -135,8 +94,6 @@ impl CFG {
             {
                 current_block.pop_instruction();
             }
-
-            // current_block.push_instruction(TACInst::LabelDecl(successor_block.block_label));
 
             for inst in successor_block.instructions {
                 current_block.push_instruction(inst);
@@ -333,14 +290,22 @@ enum TakenOrNot {
     Unknown,
 }
 
-impl From<BasicBlocks> for CFG {
-    fn from(value: BasicBlocks) -> Self {
+impl From<ProcDecl> for CFG {
+    fn from(value: ProcDecl) -> Self {
         let mut graph: StableGraph<BasicBlock, usize> = StableGraph::new();
         let mut edges: Vec<(NodeIndex, NodeIndex, usize)> = Vec::new();
         let mut label_to_index: HashMap<Label, NodeIndex> = HashMap::new();
 
+        let ProcDecl {
+            name,
+            arguments,
+            instructions,
+        } = value;
+
+        let basic_blocks = BasicBlocks::from_instrs(instructions, name.as_str());
+
         // Populate the nodes of the graph
-        for block in value.blocks.into_iter() {
+        for block in basic_blocks.blocks.into_iter() {
             let label = block.block_label.clone();
             let idx = graph.add_node(block);
             label_to_index.insert(label, idx);
@@ -370,8 +335,51 @@ impl From<BasicBlocks> for CFG {
 
         Self {
             graph,
-            name: value.proc_name,
-            arguments: value.arguments,
+            name,
+            arguments,
+        }
+    }
+}
+
+impl Into<ProcDecl> for CFG {
+    fn into(mut self) -> ProcDecl {
+        let mut schedule: InstBlock = Vec::new();
+        let mut schedule_order: Vec<NodeIndex> = Vec::with_capacity(self.graph.node_count());
+
+        let name = self.name;
+        let arguments = self.arguments;
+
+        let Some(entry) = self.graph.node_indices().next() else {
+            return ProcDecl {
+                name,
+                arguments,
+                instructions: schedule,
+            };
+        };
+
+        let mut bfs = Bfs::new(&self.graph, entry);
+
+        while let Some(nx) = bfs.next(&self.graph) {
+            schedule_order.push(nx);
+        }
+
+        for index in schedule_order {
+            let Some(block) = self.graph.remove_node(index) else {
+                continue;
+            };
+
+            schedule.push(TACInst::LabelDecl(block.block_label));
+            for inst in block.instructions {
+                schedule.push(inst);
+            }
+        }
+
+        self.graph.clear();
+
+        ProcDecl {
+            name,
+            arguments,
+            instructions: schedule,
         }
     }
 }

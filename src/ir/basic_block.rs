@@ -1,39 +1,17 @@
 use crate::frontend::Symbol;
-use crate::ir::tac::{InstBlock, Label, ProcDecl, TACInst};
+use crate::ir::tac::{InstBlock, Label, TACInst};
 
 pub struct BasicBlocks {
     pub blocks: Vec<BasicBlock>,
-    pub block_index: i64,
-    pub proc_name: Symbol,
-    pub arguments: Option<Vec<Symbol>>,
 }
 
 impl BasicBlocks {
     fn empty() -> Self {
-        Self {
-            blocks: Vec::new(),
-            proc_name: Symbol::intern("a"),
-            arguments: None,
-            block_index: -1,
-        }
+        Self { blocks: Vec::new() }
     }
 
-    fn push_block(&mut self, block_label: Label) {
-        self.blocks.push(BasicBlock::new(block_label));
-        self.block_index += 1;
-    }
-
-    fn push_instruction_last_block(&mut self, inst: TACInst) {
-        let index: usize = self.block_index.try_into().unwrap_or(0);
-        self.blocks[index].push_instruction(inst);
-    }
-}
-
-impl From<ProcDecl> for BasicBlocks {
-    fn from(proc: ProcDecl) -> Self {
+    pub fn from_instrs(instructions: InstBlock, entry_name: &str) -> Self {
         use TACInst::*;
-
-        let instructions = proc.instructions;
 
         // A way to get fresh labels
         let mut counter: i64 = 0;
@@ -58,7 +36,7 @@ impl From<ProcDecl> for BasicBlocks {
             }
 
             Some(inst) => {
-                let title = Symbol::intern(&format!("{}_entry", proc.name));
+                let title = Symbol::intern(&format!("{}_entry", entry_name));
                 basic_blocks.push_block(Label::Named(title));
                 basic_blocks.push_instruction_last_block(inst);
             }
@@ -115,9 +93,15 @@ impl From<ProcDecl> for BasicBlocks {
             }
         }
 
-        basic_blocks.proc_name = proc.name;
-        basic_blocks.arguments = proc.arguments;
         basic_blocks
+    }
+
+    fn push_block(&mut self, block_label: Label) {
+        self.blocks.push(BasicBlock::new(block_label));
+    }
+
+    fn push_instruction_last_block(&mut self, inst: TACInst) {
+        self.blocks.last_mut().unwrap().push_instruction(inst);
     }
 }
 
@@ -140,30 +124,6 @@ impl BasicBlock {
 
     pub fn pop_instruction(&mut self) -> Option<TACInst> {
         self.instructions.pop()
-    }
-
-    #[allow(dead_code)]
-    pub fn get_terminator(&self) -> Option<TACInst> {
-        let last = self.instructions.last();
-        match last {
-            Some(TACInst::UnconditionalJump(_) | TACInst::Return(_)) => last.cloned(),
-            Some(_) => None,
-            None => None,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn get_pre_terminator(&self) -> Option<TACInst> {
-        let last = self.instructions.last();
-        if !matches!(
-            last,
-            Some(TACInst::UnconditionalJump(_) | TACInst::Return(_))
-        ) {
-            return None;
-        }
-
-        let len = self.instructions.len();
-        self.instructions.get(len - 1).cloned()
     }
 }
 
