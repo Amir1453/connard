@@ -1,5 +1,6 @@
 // The following code is absolutely garbage for the time being.
 // And update is direly needed. What are those CompactStrings everywhere ??
+// Should probably intern all the x86 assembly grammar, and just emit the slices
 
 use compact_str::CompactString;
 use std::collections::HashMap;

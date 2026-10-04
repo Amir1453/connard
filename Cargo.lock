@@ -103,6 +103,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "compact_str",
+ "flat_vec",
  "hashbrown 0.17.1",
  "lalrpop",
  "lalrpop-util",
@@ -168,6 +169,12 @@ name = "fixedbitset"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
+
+[[package]]
+name = "flat_vec"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b48317a912b620addec1d59ff775003329cb2007d945faac3dcf974c472c3de"
 
 [[package]]
 name = "fnv"

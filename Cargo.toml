@@ -17,6 +17,7 @@ thiserror = "2.0.21"
 hashbrown = "0.17.1"
 parking_lot = "0.12.5"
 scoped-tls = "1.0.1"
+flat_vec = "0.1.0"
 
 [lints.clippy]
 vec_box = "allow"

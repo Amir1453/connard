@@ -190,20 +190,23 @@ impl ProcBuilder {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn builds_addition() {
-//         let mut proc = ProcBuilder::new("main");
-//
-//         proc.constant("rhs", 10)
-//             .constant("lhs", 20)
-//             .add("lhs", "rhs", "result");
-//
-//         let procedure = proc.build();
-//
-//         eprintln!("{}", procedure);
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::globals::create_session_globals_then;
+
+    #[test]
+    fn builds_addition() {
+        create_session_globals_then(|| {
+            let mut proc = ProcBuilder::new("main");
+
+            proc.constant("rhs", 10)
+                .constant("lhs", 20)
+                .add("lhs", "rhs", "result");
+
+            let procedure = proc.build();
+
+            eprintln!("{}", procedure);
+        })
+    }
+}
