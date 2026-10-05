@@ -9,13 +9,21 @@ use crate::frontend::Symbol;
 use crate::ir::tac::{InstBlock, Label, ProcDecl, TACInst, TACJumpOpcode};
 use crate::ir::{BasicBlock, BasicBlocks};
 
+/// The Control Flow Graph of a procedure. Contains a graph over basic blocks of the program.
+/// Multiple code optimizations are possible with this representation.
 pub struct CFG {
+    /// The graph of basic blocks. Each node is a basic block, and each edge weight represents an
+    /// index of the instruction that diverts the control flow to the respective block.
     pub graph: StableGraph<BasicBlock, usize>,
+    /// The procedure name from which the CFG was constructed.
     pub name: Symbol,
+    /// The arguments of the procedure from which the CFG was constructed.
     pub arguments: Option<Vec<Symbol>>,
 }
 
 impl CFG {
+    /// Removes unreachable nodes in the Control Flow Graph by doing a depth first search,
+    /// marking all the unvisited nodes, and removing them.
     pub fn remove_unreachable(&mut self) {
         let entry = match self.graph.node_indices().next() {
             Some(n) => n,
@@ -37,6 +45,8 @@ impl CFG {
         }
     }
 
+    /// Given two blocks, A and B, combines them if succ(A) = {B}, and pred(B) = {A}.
+    /// Where succ(A) denotes the successor blocks of A, and pred(B) the predecessors of B. 
     pub fn coalesce_blocks(&mut self) {
         let nodes: Vec<NodeIndex> = self.graph.node_indices().collect();
 
@@ -108,6 +118,10 @@ impl CFG {
         }
     }
 
+    /// Given two blocks A and B, if A has a conditional jump edge to B, and B has 
+    /// a conditional jump edge to some block C, unconditionally jump from B to C if 
+    /// the conditional edge from A has some sort of implication on the conditional 
+    /// jump to C.
     pub fn jump_threading(&mut self) {
         use TACInst::*;
 
@@ -143,7 +157,7 @@ impl CFG {
 
                 // If the edge is a ConditionalJump, get the predecessors of the block the
                 // ConditionalJump points to (successor block).
-                // We only work with one predecessor for now.
+                // TODO We only work with one predecessor for now.
                 if self
                     .graph
                     .neighbors_directed(successor_idx, Direction::Incoming)
@@ -177,6 +191,7 @@ impl CFG {
 
                     // If the conditions are not the same, or if the successor block is modifying
                     // the condition, we cannot make this optimization.
+                    // TODO Direct equality does not suffice, as we have no SSA.
                     if cond1 != cond2
                         || self.graph[successor_idx]
                             .instructions
@@ -259,6 +274,7 @@ impl CFG {
     }
 }
 
+/// Matches two conditional jump codes to see if some sort of implication can be reached.
 fn jthread_match_opcode(opcode1: TACJumpOpcode, opcode2: TACJumpOpcode) -> TakenOrNot {
     // Same opcode implies always taken
     if opcode1 == opcode2 {
@@ -279,17 +295,22 @@ fn jthread_match_opcode(opcode1: TACJumpOpcode, opcode2: TACJumpOpcode) -> Taken
         // x <= 0 -> not x > 0.
         (JNL, JL) | (JLE, JNLE) => TakenOrNot::NeverTaken,
 
-        // Rest we dont care
+        // We cannot make deductions about the rest.
         _ => TakenOrNot::Unknown,
     }
 }
 
+/// The enum which represents possible matchings of conditional jump opcodes.
 enum TakenOrNot {
+    /// The conditional branch is always taken.
     AlwaysTaken,
+    /// The conditional branch is never taken.
     NeverTaken,
+    /// A deduction cannot be made.
     Unknown,
 }
 
+/// Constructs a CFG from a procedure.
 impl From<ProcDecl> for CFG {
     fn from(value: ProcDecl) -> Self {
         let mut graph: StableGraph<BasicBlock, usize> = StableGraph::new();
@@ -341,6 +362,8 @@ impl From<ProcDecl> for CFG {
     }
 }
 
+/// Destructs the CFG by turning it back into a procedure.
+/// Performs unreachable block elimination as well.
 impl From<CFG> for ProcDecl {
     fn from(mut val: CFG) -> Self {
         let mut schedule: InstBlock = Vec::new();

@@ -1,5 +1,4 @@
-// The following code was directly taken and/or inspired by the rustc_span code.
-#![allow(dead_code)]
+// The following code was directly taken and/or inspired by rustc..
 
 use std::hash::BuildHasher;
 
@@ -40,10 +39,6 @@ impl Symbol {
             std::mem::transmute::<&str, &str>(session_globals.get_symbol_interner().get_str(*self))
         })
     }
-
-    pub fn as_u32(self) -> u32 {
-        self.0.as_u32()
-    }
 }
 
 impl std::fmt::Debug for Symbol {
@@ -61,6 +56,7 @@ impl std::fmt::Display for Symbol {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SymbolIndex(u32);
 
+#[allow(dead_code)]
 impl SymbolIndex {
     #[inline]
     const fn new(value: usize) -> Self {

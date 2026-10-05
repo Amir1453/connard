@@ -1,15 +1,27 @@
 use crate::frontend::Symbol;
 use crate::ir::tac::{InstBlock, Label, TACInst};
 
+/// Represents a collection of BasicBlocks.
 pub struct BasicBlocks {
+    /// The collection of basic blocks.
     pub blocks: Vec<BasicBlock>,
 }
 
 impl BasicBlocks {
-    fn empty() -> Self {
+    /// Creates an empty BasicBlocks collection.
+    const fn empty() -> Self {
         Self { blocks: Vec::new() }
     }
 
+    /// Given a sequence of instructions, converts them into basic block form.
+    /// A basic block must start with (possibly multiple) labels. 
+    /// A basic block ends with a control flow divergence (jumps and return).
+    ///
+    /// To infer a collection of basic blocks from a sequence of instructions:
+    /// 1. Start a BasicBlock.
+    /// 2. Insert a label if there is not one.
+    /// 3. Accumulate instructions until a jump or return.
+    /// 4. If there is a fall-through instruction, add an unconditional jump.
     pub fn from_instrs(instructions: InstBlock, entry_name: &str) -> Self {
         use TACInst::*;
 
@@ -44,6 +56,7 @@ impl BasicBlocks {
             None => return basic_blocks,
         }
 
+        // Actual logic that infers the basic blocks. A nightmare.
         while let Some(instruction) = inst_iter.next() {
             let next_instruction = inst_iter.peek();
 
@@ -96,21 +109,28 @@ impl BasicBlocks {
         basic_blocks
     }
 
+    /// Pushes a new block with a label.
     fn push_block(&mut self, block_label: Label) {
         self.blocks.push(BasicBlock::new(block_label));
     }
 
+    /// Pushes an instruction to the last block.
     fn push_instruction_last_block(&mut self, inst: TACInst) {
         self.blocks.last_mut().unwrap().push_instruction(inst);
     }
 }
 
+/// Represents a sequence of instructions that start with a label and end with 
+/// an unconditional jump or a return.
 pub struct BasicBlock {
+    /// The start label of the block.
     pub block_label: Label,
+    /// Instructions that are contained in the block.
     pub instructions: InstBlock,
 }
 
 impl BasicBlock {
+    /// Constructs an empty block with specified label.
     pub fn new(block_label: Label) -> Self {
         Self {
             block_label,
@@ -118,10 +138,12 @@ impl BasicBlock {
         }
     }
 
+    /// Pushes an instruction into the block. 
     pub fn push_instruction(&mut self, inst: TACInst) {
         self.instructions.push(inst);
     }
 
+    /// Pops the last instruction from the block.
     pub fn pop_instruction(&mut self) -> Option<TACInst> {
         self.instructions.pop()
     }

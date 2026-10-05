@@ -7,7 +7,6 @@ use crate::frontend::{Symbol, ast::*};
 use crate::structs::{ErrorAggregate, Stack};
 use crate::types::{ProcType, SemanticType, Span, Type};
 
-// #[derive(Clone, PartialEq)]
 pub struct TypeChecker {
     scopes: Stack<HashMap<Symbol, SemanticType>>,
     current_proc_name: Option<Symbol>,
